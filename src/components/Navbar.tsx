@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Sparkles } from "lucide-react";
 
@@ -6,8 +7,8 @@ const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   const navLinks = [
-    { name: "פעילויות חינם", href: "#free" },
-    { name: "פעילויות פרימיום", href: "#premium" },
+    { name: "פעילויות", href: "#activities" },
+    { name: "מחירים", href: "#pricing" },
     { name: "אודות", href: "#about" },
     { name: "צור קשר", href: "#contact" },
   ];
@@ -17,12 +18,12 @@ const Navbar = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <a href="#" className="flex items-center gap-2 group">
+          <Link to="/" className="flex items-center gap-2 group">
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center group-hover:scale-105 transition-transform">
               <span className="text-primary-foreground font-bold text-xl">א</span>
             </div>
             <span className="font-bold text-xl text-foreground">אלוגברה</span>
-          </a>
+          </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
@@ -39,10 +40,12 @@ const Navbar = () => {
 
           {/* CTA Button */}
           <div className="hidden md:block">
-            <Button variant="premium" size="default" className="gap-2">
-              <Sparkles className="w-4 h-4" />
-              התחל עכשיו
-            </Button>
+            <a href="#pricing">
+              <Button variant="premium" size="default" className="gap-2">
+                <Sparkles className="w-4 h-4" />
+                התחל עכשיו
+              </Button>
+            </a>
           </div>
 
           {/* Mobile Menu Button */}
@@ -69,10 +72,12 @@ const Navbar = () => {
                   {link.name}
                 </a>
               ))}
-              <Button variant="premium" className="mt-2 gap-2">
-                <Sparkles className="w-4 h-4" />
-                התחל עכשיו
-              </Button>
+              <a href="#pricing">
+                <Button variant="premium" className="mt-2 gap-2 w-full">
+                  <Sparkles className="w-4 h-4" />
+                  התחל עכשיו
+                </Button>
+              </a>
             </div>
           </div>
         )}

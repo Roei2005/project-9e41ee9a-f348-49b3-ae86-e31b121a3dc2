@@ -2,6 +2,10 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Play, Sparkles } from "lucide-react";
 
 const Hero = () => {
+  const scrollToGrades = () => {
+    document.getElementById("grades")?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
     <section 
       className="relative min-h-screen overflow-hidden"
@@ -37,21 +41,20 @@ const Hero = () => {
             <span className="text-gradient-gold">בדרך חדשה</span>
           </h1>
 
-          {/* Subheading */}
+          {/* Subheading - Updated */}
           <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto mb-10 animate-fade-up animation-delay-200 leading-relaxed">
-            פעילויות אינטראקטיביות, סיכומים מקצועיים וחומרי לימוד מותאמים אישית. 
-            הדרך הכי טובה ללמוד מתמטיקה היא דרך התנסות!
+            בחרו את השכבה שלכם והתחילו ללמוד בצורה אינטראקטיבית
           </p>
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-up animation-delay-300">
-            <Button variant="hero" size="xl" className="gap-2">
-              גלה את הפעילויות
+            <Button variant="hero" size="xl" className="gap-2" onClick={scrollToGrades}>
+              בחרו רמה והתחילו
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <Button variant="heroOutline" size="xl" className="gap-2">
               <Play className="w-5 h-5" />
-              צפה בסרטון
+              צפו בסרטון
             </Button>
           </div>
 
