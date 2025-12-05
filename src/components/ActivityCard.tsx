@@ -1,9 +1,11 @@
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Lock, Play, Clock, Users } from "lucide-react";
+import { Lock, Play, Clock, Users, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ActivityCardProps {
+  id?: string;
   title: string;
   description: string;
   category: string;
@@ -14,6 +16,7 @@ interface ActivityCardProps {
 }
 
 const ActivityCard = ({
+  id,
   title,
   description,
   category,
@@ -27,20 +30,25 @@ const ActivityCard = ({
     "מתקדם": "bg-destructive/10 text-destructive",
   };
 
-  return (
+  const CardContent = (
     <div className={cn(
-      "group relative bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1",
+      "group relative bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1 h-full",
       isPremium && "ring-2 ring-accent/20"
     )}>
-      {/* Premium Badge */}
-      {isPremium && (
-        <div className="absolute top-4 left-4 z-10">
+      {/* Top Badge - Free or Premium */}
+      <div className="absolute top-4 left-4 z-10">
+        {isPremium ? (
           <Badge className="bg-gradient-to-l from-gold to-gold-light text-foreground font-semibold px-3 py-1 gap-1">
             <Lock className="w-3 h-3" />
             פרימיום
           </Badge>
-        </div>
-      )}
+        ) : (
+          <Badge className="bg-success text-success-foreground font-semibold px-3 py-1 gap-1">
+            <Sparkles className="w-3 h-3" />
+            חינם
+          </Badge>
+        )}
+      </div>
 
       {/* Image Placeholder */}
       <div className="relative h-48 bg-gradient-to-br from-primary/10 to-secondary overflow-hidden">
@@ -95,11 +103,21 @@ const ActivityCard = ({
           variant={isPremium ? "premium" : "free"} 
           className="w-full"
         >
-          {isPremium ? "גישה לפרימיום" : "התחל בחינם"}
+          {isPremium ? "למנויים בלבד" : "נסו עכשיו"}
         </Button>
       </div>
     </div>
   );
+
+  if (id) {
+    return (
+      <Link to={`/activity/${id}`} className="block h-full">
+        {CardContent}
+      </Link>
+    );
+  }
+
+  return CardContent;
 };
 
 export default ActivityCard;
