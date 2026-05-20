@@ -30,11 +30,10 @@ const MiniLinePlayground = () => {
           </div>
         </div>
 
-        <div className="relative rounded-2xl overflow-hidden bg-white border border-border">
+        <div className="relative rounded-2xl overflow-hidden bg-white border border-border" dir="ltr">
           <svg
             viewBox="0 0 400 400"
             className="w-full h-auto block"
-            dir="ltr"
           >
             {/* grid */}
             <defs>
