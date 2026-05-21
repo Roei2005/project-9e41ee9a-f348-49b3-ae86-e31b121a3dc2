@@ -10,7 +10,8 @@ const AppNav = () => {
 
   const links = [
     { to: "/", label: "ראשי" },
-    { to: "/dashboard", label: "הלימודים שלי" },
+    { to: "/dashboard", label: "הכלים שלנו" },
+    { to: "/about", label: "קצת עליי" },
     { to: "/pricing", label: "מחירים" },
   ];
 

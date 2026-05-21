@@ -4,6 +4,7 @@ import AppNav from "@/components/AppNav";
 import TriangleShowcase from "@/components/landing/TriangleShowcase";
 import StatsSection from "@/components/landing/StatsSection";
 import LearnAloneSection from "@/components/landing/LearnAloneSection";
+import TeacherStorySection from "@/components/landing/TeacherStorySection";
 import { MoveLeft, Sparkles } from "lucide-react";
 
 const Landing = () => {
@@ -64,6 +65,9 @@ const Landing = () => {
           </div>
         </div>
       </section>
+
+      {/* Teacher story with image */}
+      <TeacherStorySection />
 
       {/* Stats with animated counters */}
       <StatsSection />
