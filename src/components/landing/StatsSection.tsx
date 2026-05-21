@@ -1,28 +1,39 @@
 import { useEffect, useRef, useState } from "react";
 import { TrendingUp, Users, Sparkles } from "lucide-react";
 
-const useCountUp = (target: number, start: boolean, duration = 1600) => {
+const useCountUp = (
+  target: number,
+  start: boolean,
+  duration = 1600,
+  runKey: number = 0
+) => {
   const [val, setVal] = useState(0);
   useEffect(() => {
-    if (!start) return;
+    if (!start) {
+      setVal(0);
+      return;
+    }
+    setVal(0);
     const t0 = performance.now();
     let raf = 0;
     const tick = (t: number) => {
       const p = Math.min(1, (t - t0) / duration);
-      // ease-out cubic
       const eased = 1 - Math.pow(1 - p, 3);
       setVal(Math.round(eased * target));
       if (p < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [target, start, duration]);
+  }, [target, start, duration, runKey]);
   return val;
 };
 
 const StatsSection = () => {
   const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
+  // runKey increments every time the section re-enters the viewport,
+  // forcing the counters to restart.
+  const [runKey, setRunKey] = useState(0);
+  const [active, setActive] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
@@ -30,18 +41,27 @@ const StatsSection = () => {
     const obs = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
-          if (e.isIntersecting) setVisible(true);
+          if (e.isIntersecting) {
+            setActive(false);
+            // next frame: bump key and activate to restart animation
+            requestAnimationFrame(() => {
+              setRunKey((k) => k + 1);
+              setActive(true);
+            });
+          } else {
+            setActive(false);
+          }
         });
       },
-      { threshold: 0.3 }
+      { threshold: 0.35 }
     );
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
 
-  const students = useCountUp(500, visible);
-  const improvement = useCountUp(98, visible);
-  const topics = useCountUp(40, visible);
+  const students = useCountUp(500, active, 1700, runKey);
+  const improvement = useCountUp(98, active, 1700, runKey);
+  const topics = useCountUp(40, active, 1700, runKey);
 
   return (
     <section className="py-24 relative" ref={ref}>

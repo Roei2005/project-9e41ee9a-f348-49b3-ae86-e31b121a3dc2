@@ -8,6 +8,7 @@ import Landing from "./pages/Landing";
 import Pricing from "./pages/Pricing";
 import Dashboard from "./pages/Dashboard";
 import Activity from "./pages/Activity";
+import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,6 +22,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/" element={<Landing />} />
+            <Route path="/about" element={<About />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/activity/:id" element={<Activity />} />
