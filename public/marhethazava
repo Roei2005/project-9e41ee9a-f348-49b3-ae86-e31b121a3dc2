@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>שיטת ההצבה - צעד אחר צעד</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --רקע: #f4f6f8;
+      --לבן: #ffffff;
+      --טקסט: #1f2937;
+      --משני: #4b5563;
+      --קו: #e5e7eb;
+      --טורקיז: #0d9488;
+      --כחול: #2563eb;
+      --סגול: #7c3aed;
+      --ירוק: #16a34a;
+      --ירוק-בהיר: #dcfce7;
+      --צהוב-היילייט: #fef08a;
+      --כתום: #ea580c;
+      --אדום: #dc2626;
+      --אדום-בהיר: #fee2e2;
+      --צל: 0 10px 25px rgba(15, 23, 42, 0.06);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Heebo', sans-serif;
+      background: linear-gradient(180deg, #f8fafc 0%, var(--רקע) 100%);
+      color: var(--טקסט);
+    }
+    button { font: inherit; }
+    .מעטפת { max-width: 1450px; margin: 0 auto; padding: 18px; }
+    .כותרת {
+      background: var(--לבן);
+      border: 1px solid var(--קו);
+      border-radius: 28px;
+      box-shadow: var(--צל);
+      padding: 24px;
+      margin-bottom: 18px;
+      border-right: 8px solid var(--טורקיז);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(2rem, 4.5vw, 3.8rem);
+      font-weight: 900;
+      line-height: 1.1;
+    }
+    .כותרת p { margin: 0; color: var(--משני); font-size: clamp(1.1rem, 2vw, 1.3rem); }
+    .טאבים { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+    .טאב {
+      border: 1px solid var(--קו);
+      background: var(--לבן);
+      color: var(--טקסט);
+      border-radius: 18px;
+      padding: 16px 20px;
+      cursor: pointer;
+      font-size: 1.16rem;
+      font-weight: 800;
+      transition: all 0.2s ease;
+    }
+    .טאב:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .טאב.פעיל { background: #f0fdfa; border-color: var(--טורקיז); color: var(--טורקיז); }
+    
+    .פריסה { display: grid; grid-template-columns: 1.1fr 1.3fr; gap: 18px; align-items: start; transition: all 0.3s ease; }
+    .פריסה.מלא { grid-template-columns: 1fr; }
+    
+    .כרטיס {
+      background: var(--לבן);
+      border: 1px solid var(--קו);
+      border-radius: 28px;
+      box-shadow: var(--צל);
+      padding: 24px;
+    }
+    .כותרת-דוגמה { margin: 0 0 10px; font-size: clamp(1.5rem, 3vw, 2.2rem); font-weight: 900; line-height: 1.2; }
+    
+    .מערכת {
+      display: inline-flex;
+      flex-direction: column;
+      gap: 14px;
+      padding: 18px 24px;
+      border-radius: 22px;
+      background: #f8fafc;
+      border: 1px solid var(--קו);
+      margin: 10px 0 18px;
+      min-width: min(100%, 520px);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .שורה-משוואה {
+      font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+      font-weight: 800;
+      line-height: 1.2;
+      direction: ltr;
+      unicode-bidi: embed;
+    }
+    .כחול { color: var(--כחול); }
+    .סגול { color: var(--סגול); }
+    
+    .תוכן-שלב {
+      border: 1px solid var(--קו);
+      border-radius: 24px;
+      padding: 24px;
+      background: linear-gradient(to bottom right, #ffffff, #f8fafc);
+      min-height: 380px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+    }
+    .מספור {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 54px;
+      height: 54px;
+      border-radius: 16px;
+      background: var(--ירוק-בהיר);
+      color: var(--ירוק);
+      font-size: 1.5rem;
+      font-weight: 900;
+      margin-bottom: 16px;
+    }
+    .מספור-אדום { background: var(--אדום-בהיר); color: var(--אדום); }
+    
+    .כותרת-שלב { margin: 0 0 12px; font-size: clamp(1.4rem, 2.5vw, 1.9rem); font-weight: 900; }
+    .טקסט-שלב { font-size: clamp(1.2rem, 2vw, 1.5rem); line-height: 1.8; color: #374151; }
+    .טקסט-שלב p { margin: 0 0 12px; }
+    
+    .ביטוי {
+      display: inline-block;
+      direction: ltr;
+      unicode-bidi: embed;
+      padding: 6px 14px;
+      border-radius: 12px;
+      border: 1px solid #d1d5db;
+      background: #fff;
+      font-weight: 800;
+      margin: 4px 2px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+    }
+    .מרקר-צהוב { background: var(--צהוב-היילייט) !important; border-color: #fde047 !important; }
+    .מרקר-ירוק { background: #bbf7d0 !important; border-color: #86efac !important; }
+    
+    .הערת-צד {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--צהוב-היילייט);
+      border: 1px solid #fde047;
+      padding: 8px 14px;
+      border-radius: 14px;
+      font-weight: 800;
+      margin-bottom: 12px;
+      color: #854d0e;
+      font-size: 0.95em;
+    }
+    
+    .תגית-העתק { background: #eff6ff; color: #1d4ed8; border: 1px dashed #93c5fd; padding: 2px 8px; border-radius: 8px; font-size: 0.85em; font-weight: 900; }
+    .תגית-הדבק { background: #f5f3ff; color: #6d28d9; border: 1px dashed #c4b5fd; padding: 2px 8px; border-radius: 8px; font-size: 0.85em; font-weight: 900; }
+    
+    .שאלה-מנחה {
+      background: #fdf2f8;
+      border: 1px dashed #fbcfe8;
+      color: #be185d;
+      padding: 12px 16px;
+      border-radius: 14px;
+      margin-top: 16px;
+      font-weight: 800;
+      font-size: 1.15rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .ltr { direction: ltr; unicode-bidi: embed; display: inline-block; }
+    
+    .שורת-כפתורים { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+    .כפתור {
+      min-height: 56px;
+      border: none;
+      border-radius: 16px;
+      padding: 12px 24px;
+      cursor: pointer;
+      font-size: 1.15rem;
+      font-weight: 800;
+      transition: all 0.2s;
+    }
+    .כפתור:hover { transform: translateY(-2px); }
+    .כפתור:active { transform: translateY(1px); }
+    .כפתור-ראשי { background: var(--טורקיז); color: white; box-shadow: 0 8px 20px rgba(13, 148, 136, 0.2); }
+    .כפתור-משני { background: #e5e7eb; color: var(--טקסט); }
+    
+    .מד-שלבים { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+    .עיגול-שלב {
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 1.1rem;
+      border: 2px solid var(--קו);
+      background: #fff; color: var(--משני);
+      transition: all 0.3s;
+    }
+    .עיגול-שלב.נוכחי { background: var(--טורקיז); color: white; border-color: var(--טורקיז); transform: scale(1.1); }
+    .עיגול-שלב.עבר { background: #ccfbf1; color: var(--טורקיז); border-color: #5eead4; }
+    
+    .גרף-כרטיס { padding: 20px; transition: opacity 0.3s; }
+    .כותרת-גרף { margin: 0 0 10px; font-size: clamp(1.4rem, 2.5vw, 1.9rem); font-weight: 900; }
+    .גרף-הסבר { margin: 0 0 12px; font-size: 1.1rem; color: var(--משני); }
+    canvas {
+      width: 100%; height: auto;
+      display: block;
+      background: #fff;
+      border-radius: 20px;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .שורת-פתרון {
+      margin-top: 16px;
+      border-radius: 18px;
+      padding: 16px;
+      background: var(--ירוק-בהיר);
+      border: 1px solid #86efac;
+      color: var(--ירוק);
+      font-size: clamp(1.3rem, 2vw, 1.8rem);
+      font-weight: 800;
+      text-align: center;
+    }
+    .שורת-פתרון.אדום { background: var(--אדום-בהיר); border-color: #fca5a5; color: var(--אדום); }
+    .שורת-פתרון span { direction: ltr; unicode-bidi: embed; display: inline-block; margin-inline-start: 8px; font-size: 1.2em; }
+
+    .סיכום-תוכן { font-size: 1.25rem; line-height: 1.7; }
+    .קופסת-הסבר {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .קופסת-הסבר strong { color: #1e40af; font-size: 1.1em; }
+    
+    .שלב-סיכום {
+      display: flex; gap: 16px; align-items: flex-start;
+      margin-bottom: 16px;
+      background: #fff;
+      padding: 16px;
+      border-radius: 16px;
+      border: 1px solid var(--קו);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    }
+    .מספר-סיכום {
+      flex-shrink: 0;
+      width: 40px; height: 40px;
+      background: var(--טורקיז); color: white;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900; font-size: 1.2rem;
+    }
+    
+    .הודעת-המשך {
+      text-align: center;
+      padding: 40px 20px;
+      background: linear-gradient(135deg, #fff7ed, #ffedd5);
+      border: 2px dashed #fdba74;
+      border-radius: 24px;
+      color: #c2410c;
+    }
+    .הודעת-המשך h3 { font-size: 2.5rem; margin: 0 0 10px; font-weight: 900; }
+    .הודעת-המשך p { font-size: 1.4rem; font-weight: 700; margin: 0; }
+
+    @media (max-width: 1050px) { .פריסה { grid-template-columns: 1fr; } }
+    @media (max-width: 720px) {
+      .מעטפת { padding: 10px; }
+      .כרטיס, .כותרת { padding: 18px; border-radius: 20px; }
+      .תוכן-שלב { min-height: auto; }
+      .שלב-סיכום { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="מעטפת">
+    <header class="כותרת">
+      <h1>שיטת ההצבה (העתק הדבק)</h1>
+      <p>כל השיטות מצוינות ומובילות לאותה מטרה: מציאת נקודת החיתוך בין שני ישרים. כאן נלמד מתי ולמה הכי כדאי פשוט להעתיק ולהדביק!</p>
+    </header>
+
+    <div class="טאבים">
+      <button class="טאב פעיל" data-tab="1">דוגמה 1 - מבודד מוכן</button>
+      <button class="טאב" data-tab="2">דוגמה 2 - צריך לבודד</button>
+      <button class="טאב" data-tab="3">דוגמה 3 - כשזה פחות מתאים</button>
+      <button class="טאב" data-tab="4">סיכום השיטה</button>
+    </div>
+
+    <main class="פריסה" id="אזור-פריסה">
+      <section class="כרטיס" id="כרטיס-ראשי">
+        <h2 class="כותרת-דוגמה" id="כותרת-דוגמה"></h2>
+
+        <div class="מערכת" id="אזור-מערכת">
+          <div class="שורה-משוואה כחול" id="משוואה-1"></div>
+          <div class="שורה-משוואה סגול" id="משוואה-2"></div>
+        </div>
+
+        <div class="תוכן-שלב" id="אזור-שלב"></div>
+
+        <div class="שורת-כפתורים" id="כפתורים-שלבים">
+          <button class="כפתור כפתור-ראשי" id="הבא">לשלב הבא</button>
+          <button class="כפתור כפתור-משני" id="הקודם">לשלב הקודם</button>
+          <button class="כפתור כפתור-משני" id="התחל">להתחלה</button>
+        </div>
+
+        <div class="מד-שלבים" id="מד-שלבים"></div>
+      </section>
+
+      <section class="כרטיס גרף-כרטיס" id="אזור-גרף">
+        <h2 class="כותרת-גרף">בסוף מדובר בנקודת חיתוך!</h2>
+        <p class="גרף-הסבר">לא משנה שעבדנו באלגברה, התוצאה היא מפגש בין שני ישרים.</p>
+        <canvas id="גרף" width="980" height="700"></canvas>
+        <div class="שורת-פתרון" id="שורת-פתרון"></div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const examples = {
+      1: {
+        title: 'דוגמה 1 - פעולת העתק הדבק קלאסית',
+        eq1: 'y = 2x + 1',
+        eq2: '3x + 2y = 16',
+        lines: [
+          { m: 2, b: 1, color: '#2563eb', label: 'y = 2x + 1' },
+          { m: -1.5, b: 8, color: '#7c3aed', label: '3x + 2y = 16' }
+        ],
+        point: { x: 2, y: 5 },
+        graphNeeded: true,
+        steps: [
+          { title: 'המערכת הנתונה', html: 'שימו לב למשוואה הראשונה! ה-<span class="ביטוי">y</span> כבר מבודד לבד בצד אחד.<br><span class="ביטוי כחול">y = 2x + 1</span><br><span class="ביטוי סגול">3x + 2y = 16</span><div class="שאלה-מנחה">🤔 מה לדעתכם נוכל לעשות עם המידע הזה?</div>' },
+          { title: 'פעולת ההעתק (Copy)', html: 'אנחנו יודעים ש-<span class="ביטוי">y</span> הוא בדיוק <span class="ביטוי מרקר-צהוב">2x + 1</span>.<br>ניקח את הביטוי הזה ונעשה לו <span class="תגית-העתק">העתק</span>!<div class="שאלה-מנחה">🤔 לאיזו משוואה כדאי לנו להעביר אותו עכשיו?</div>' },
+          { title: 'פעולת ההדבק (Paste)', html: 'נלך למשוואה השנייה, נמחק את האות <span class="ביטוי">y</span>, ונעשה <span class="תגית-הדבק">הדבק</span> לביטוי בתוך סוגריים:<br><span class="ביטוי ltr" style="color: var(--סגול)">3x + 2(<span class="מרקר-צהוב" style="color: var(--טקסט)">2x + 1</span>) = 16</span><br><strong>הרווחנו!</strong> קיבלנו משוואה עם נעלם אחד בלבד.<div class="שאלה-מנחה">🤔 איך פותרים משוואה שיש בה סוגריים?</div>' },
+          { title: 'פותחים סוגריים ופותרים', html: 'נכפול את ה-2 במה שבתוך הסוגריים:<br><span class="ביטוי">3x + 4x + 2 = 16</span><br>נכנס איברים דומים:<br><span class="ביטוי">7x + 2 = 16</span><br>נעביר את ה-2 אגף ונחלק:<br><span class="ביטוי">7x = 14</span><br><span class="ביטוי מרקר-צהוב">x = 2</span><div class="שאלה-מנחה">🤔 יופי שמצאנו את X! אבל מה חסר לנו כדי לסיים?</div>' },
+          { title: 'מוצאים את y', html: '<div class="הערת-צד">כבר מצאנו: x = 2</div><br>עכשיו חוזרים למשוואה הראשונה והנוחה (זו שכבר מבודדת!), ומציבים בה את ה-X שמצאנו:<br><span class="ביטוי">y = 2(2) + 1</span><br><span class="ביטוי מרקר-צהוב">y = 5</span><div class="שאלה-מנחה">🤔 יש לנו את ה-X ואת ה-Y. איך כותבים את זה כתשובה סופית?</div>' },
+          { title: 'הפתרון', html: 'מצאנו את ה-X ואת ה-Y. כותבים את הפתרון כנקודה:<br><span class="ביטוי ltr מרקר-ירוק">(2, 5)</span><br>כמו תמיד, זאת הנקודה שבה שני הישרים נפגשים!' }
+        ]
+      },
+      2: {
+        title: 'דוגמה 2 - קודם מבודדים, אז מדביקים',
+        eq1: 'x - 3y = 4',
+        eq2: '2x + y = 15',
+        lines: [
+          { m: 1/3, b: -4/3, color: '#2563eb', label: 'x - 3y = 4' },
+          { m: -2, b: 15, color: '#7c3aed', label: '2x + y = 15' }
+        ],
+        point: { x: 7, y: 1 },
+        graphNeeded: true,
+        steps: [
+          { title: 'המערכת הנתונה', html: 'כאן אין לנו משתנה מבודד (שעומד לבד בצד).<br><span class="ביטוי כחול">x - 3y = 4</span><br><span class="ביטוי סגול">2x + y = 15</span><div class="שאלה-מנחה">🤔 מה לדעתכם צריך להיות הצעד הראשון שלנו כאן?</div>' },
+          { title: 'מבודדים משתנה', html: 'נחפש אות שקל לבודד (בלי מספר צמוד אליה). למשל ה-<span class="ביטוי">x</span> במשוואה הראשונה! נעביר את ה-<span class="ביטוי">-3y</span> לאגף השני:<br><span class="ביטוי כחול">x = 3y + 4</span><br>הנה, יצרנו משוואה חדשה שממנה נעשה העתק!<div class="שאלה-מנחה">🤔 יצרנו משוואה מבודדת. איך המערכת שלנו נראית עכשיו?</div>' },
+          { title: 'המערכת החדשה מול העיניים', html: 'ככה נראית המערכת שלנו עכשיו:<br><span class="ביטוי כחול">x = 3y + 4</span><br><span class="ביטוי סגול">2x + y = 15</span><div class="שאלה-מנחה">🤔 לאן אנחנו הולכים להדביק את מה שמצאנו?</div>' },
+          { title: 'העתק והדבק (Copy Paste)', html: 'ניקח את הביטוי <span class="ביטוי מרקר-צהוב">3y + 4</span> ששווה ל-<span class="ביטוי">x</span>, ונדביק אותו <strong>במשוואה השנייה</strong> במקום ה-x:<br><span class="ביטוי ltr" style="color: var(--סגול)">2(<span class="מרקר-צהוב" style="color: var(--טקסט)">3y + 4</span>) + y = 15</span><div class="שאלה-מנחה">🤔 איך מתקדמים עם המשוואה החדשה הזאת?</div>' },
+          { title: 'פותרים את המשוואה', html: 'פותחים סוגריים:<br><span class="ביטוי">6y + 8 + y = 15</span><br>מכנסים איברים דומים (y עם y, מספרים עם מספרים):<br><span class="ביטוי">7y = 15 - 8</span><br><span class="ביטוי">7y = 7</span><br><span class="ביטוי מרקר-צהוב">y = 1</span><div class="שאלה-מנחה">🤔 יש לנו את ה-Y. באיזו משוואה הכי קל להציב אותו כדי למצוא את X?</div>' },
+          { title: 'מוצאים את x', html: '<div class="הערת-צד">כבר מצאנו: y = 1</div><br>נציב את ה-y במשוואה המבודדת שלנו:<br><span class="ביטוי">x = 3(1) + 4</span><br><span class="ביטוי מרקר-צהוב">x = 7</span><div class="שאלה-מנחה">🤔 מצאנו הכל! איך נרשום את התשובה?</div>' },
+          { title: 'הפתרון', html: 'מצאנו את ה-X ואת ה-Y. כותבים את הפתרון כנקודה מסודרת (קודם X ואז Y):<br><span class="ביטוי ltr מרקר-ירוק">(7, 1)</span>' }
+        ]
+      },
+      3: {
+        title: 'דוגמה 3 - מתי לא כדאי לעשות העתק הדבק?',
+        eq1: '3x + 4y = 17',
+        eq2: '5x - 4y = 7',
+        graphNeeded: false,
+        steps: [
+          { title: 'המערכת הנתונה', html: 'תראו את המערכת הבאה:<br><span class="ביטוי כחול">3x + 4y = 17</span><br><span class="ביטוי סגול">5x - 4y = 7</span><br>לכל הנעלמים יש מקדמים (מספרים צמודים).<div class="שאלה-מנחה">🤔 איזה קושי אתם צופים אם ננסה את השיטה הגרפית כאן?</div>' },
+          { title: 'ננסה שיטה גרפית?', html: 'לצייר את זה על גרף יהיה מסובך. המספרים לא יחתכו את הצירים במספרים שלמים ויהיה קשה מאוד למצוא נקודת חיתוך מדויקת בעין.<div class="שאלה-מנחה">🤔 אז מה לגבי שיטת העתק הדבק? יעבוד בקלות?</div>' },
+          { title: 'ננסה שיטת הצבה (העתק הדבק)?', html: 'אם ננסה לבודד את <span class="ביטוי">x</span> מהמשוואה הראשונה, נצטרך לחלק ב-3. נקבל שבר קצת מסורבל:<br><span class="ביטוי">x = (17 - 4y) / 3</span><br>ואת הדבר הזה נצטרך להדביק במשוואה השנייה? <strong>אפשר, אבל זה מתכון לטעויות!</strong><div class="שאלה-מנחה">🤔 אז איזה עוד כלים נשארו לנו בארגז הכלים?</div>' },
+          { title: 'אז מה עושים?', html: '<div class="הודעת-המשך"><h3>נגיע לזה בהמשך! 😎</h3><p>למערכות כאלה המציאו שיטה שלישית וחכמה בשם "השוואת מקדמים". נלמד אותה בשיעור הבא!</p></div>', isMessage: true }
+        ]
+      }
+    };
+
+    const summary = {
+      title: 'סיכום - שיטת ההצבה במספרים',
+      html: `
+        <div class="סיכום-תוכן">
+          <div class="קופסת-הסבר">
+            <strong>למה השיטה הזאת קיימת?</strong> <br>
+            כי אי אפשר לפתור משוואה עם שני נעלמים. המטרה שלנו היא "להיפטר" מנעלם אחד על ידי החלפתו בביטוי שווה ערך, וכך לקבל משוואה רגילה שאנחנו יודעים לפתור. בסוף, <strong>הכל מתחבר לנקודת חיתוך אחת על גרף!</strong>
+          </div>
+          
+          <div class="שלב-סיכום">
+            <div class="מספר-סיכום">1</div>
+            <div><strong>מבודדים משתנה:</strong> בוחרים באחת המשוואות אות שקלה לבידוד (למשל X בלי מספר לידו), ומעבירים את כל השאר לאגף השני. אם יש כבר משתנה מבודד - הרווחנו, מדלגים לשלב 2.</div>
+          </div>
+          <div class="שלב-סיכום">
+            <div class="מספר-סיכום">2</div>
+            <div><strong>העתק-הדבק:</strong> מעתיקים את הביטוי של המשתנה המבודד, ומדביקים אותו <strong>במשוואה השנייה</strong> במקום אותה האות (חובה לשים בתוך סוגריים!).</div>
+          </div>
+          <div class="שלב-סיכום">
+            <div class="מספר-סיכום">3</div>
+            <div><strong>פותרים משוואה:</strong> קיבלנו משוואה עם נעלם אחד. פותחים סוגריים, מכנסים איברים, ומוצאים את המספר של המשתנה הראשון.</div>
+          </div>
+          <div class="שלב-סיכום">
+            <div class="מספר-סיכום">4</div>
+            <div><strong>מוצאים את החצי השני:</strong> מציבים את המספר שמצאנו במשוואה המבודדת (משלב 1) כדי לגלות את המשתנה השני בקלות. ורושמים את התשובה כנקודה (X,Y).</div>
+          </div>
+        </div>
+      `
+    };
+
+    const tabButtons = [...document.querySelectorAll('[data-tab]')];
+    const exampleTitle = document.getElementById('כותרת-דוגמה');
+    const eq1El = document.getElementById('משוואה-1');
+    const eq2El = document.getElementById('משוואה-2');
+    const stepArea = document.getElementById('אזור-שלב');
+    const progressArea = document.getElementById('מד-שלבים');
+    const solutionLine = document.getElementById('שורת-פתרון');
+    const nextBtn = document.getElementById('הבא');
+    const prevBtn = document.getElementById('הקודם');
+    const startBtn = document.getElementById('התחל');
+    const systemArea = document.getElementById('אזור-מערכת');
+    const stepsButtonsArea = document.getElementById('כפתורים-שלבים');
+    const canvas = document.getElementById('גרף');
+    const ctx = canvas.getContext('2d');
+    const layoutArea = document.getElementById('אזור-פריסה');
+    const graphArea = document.getElementById('אזור-גרף');
+
+    let currentTab = 1;
+    let currentStep = 0;
+
+    function fmt(n) {
+      const rounded = Math.round(n * 100) / 100;
+      return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
+    }
+
+    function pointText(x, y) {
+      return `(${fmt(x)}, ${fmt(y)})`;
+    }
+
+    function renderStep() {
+      if (currentTab === 4) {
+        exampleTitle.textContent = summary.title;
+        systemArea.style.display = 'none';
+        stepsButtonsArea.style.display = 'none';
+        progressArea.innerHTML = '';
+        stepArea.innerHTML = summary.html;
+        
+        graphArea.style.display = 'none';
+        layoutArea.classList.add('מלא');
+        return;
+      }
+
+      const example = examples[currentTab];
+      const step = example.steps[currentStep];
+
+      if (example.graphNeeded) {
+        graphArea.style.display = 'block';
+        layoutArea.classList.remove('מלא');
+      } else {
+        graphArea.style.display = 'none';
+        layoutArea.classList.add('מלא');
+      }
+
+      systemArea.style.display = 'inline-flex';
+      stepsButtonsArea.style.display = 'flex';
+      
+      exampleTitle.textContent = example.title;
+      eq1El.textContent = example.eq1;
+      eq2El.textContent = example.eq2;
+
+      let stepNumClass = 'מספור';
+      if (step.isMessage) stepNumClass += ' מספור-אדום';
+      
+      let stepHtml = '';
+      if (!step.isMessage) {
+         stepHtml += `<div class="${stepNumClass}">${currentStep + 1}</div>`;
+      }
+      stepHtml += `<h3 class="כותרת-שלב">${step.title}</h3>
+                   <div class="טקסט-שלב">${step.html}</div>`;
+                   
+      stepArea.innerHTML = stepHtml;
+
+      progressArea.innerHTML = example.steps.map((_, index) => {
+        let cls = 'עיגול-שלב';
+        if (index < currentStep) cls += ' עבר';
+        if (index === currentStep) cls += ' נוכחי';
+        return `<div class="${cls}">${index + 1}</div>`;
+      }).join('');
+
+      prevBtn.disabled = currentStep === 0;
+      nextBtn.disabled = currentStep === example.steps.length - 1;
+      prevBtn.style.opacity = currentStep === 0 ? '0.5' : '1';
+      nextBtn.style.opacity = currentStep === example.steps.length - 1 ? '0.5' : '1';
+
+      if (example.graphNeeded) {
+        solutionLine.className = 'שורת-פתרון';
+        solutionLine.innerHTML = currentStep >= example.steps.length - 1
+          ? `נקודת החיתוך היא: <span>${pointText(example.point.x, example.point.y)}</span>`
+          : 'הפתרון יופיע בסוף התהליך';
+        drawGraph(example, currentStep);
+      }
+    }
+
+    function baseGrid(minX, maxX, minY, maxY) {
+      const w = canvas.width, h = canvas.height;
+      const pad = 60;
+      const scaleX = (w - pad * 2) / (maxX - minX);
+      const scaleY = (h - pad * 2) / (maxY - minY);
+      const toX = x => pad + (x - minX) * scaleX;
+      const toY = y => h - pad - (y - minY) * scaleY;
+
+      ctx.clearRect(0, 0, w, h);
+
+      ctx.strokeStyle = '#f3f4f6';
+      ctx.lineWidth = 1.5;
+      for (let x = Math.ceil(minX); x <= Math.floor(maxX); x++) {
+        const px = toX(x);
+        ctx.beginPath(); ctx.moveTo(px, pad/2); ctx.lineTo(px, h - pad/2); ctx.stroke();
+      }
+      for (let y = Math.ceil(minY); y <= Math.floor(maxY); y++) {
+        const py = toY(y);
+        ctx.beginPath(); ctx.moveTo(pad/2, py); ctx.lineTo(w - pad/2, py); ctx.stroke();
+      }
+
+      ctx.strokeStyle = '#1f2937';
+      ctx.lineWidth = 2.5;
+      if (minY <= 0 && maxY >= 0) { 
+        ctx.beginPath(); ctx.moveTo(pad/2, toY(0)); ctx.lineTo(w - pad/2, toY(0)); ctx.stroke(); 
+        ctx.beginPath(); ctx.moveTo(w - pad/2, toY(0)); ctx.lineTo(w - pad/2 - 10, toY(0) - 5); ctx.lineTo(w - pad/2 - 10, toY(0) + 5); ctx.fill();
+      }
+      if (minX <= 0 && maxX >= 0) { 
+        ctx.beginPath(); ctx.moveTo(toX(0), h - pad/2); ctx.lineTo(toX(0), pad/2); ctx.stroke(); 
+        ctx.beginPath(); ctx.moveTo(toX(0), pad/2); ctx.lineTo(toX(0) - 5, pad/2 + 10); ctx.lineTo(toX(0) + 5, pad/2 + 10); ctx.fill();
+      }
+
+      ctx.font = 'bold 18px Heebo';
+      ctx.fillStyle = '#6b7280';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let x = Math.ceil(minX); x <= Math.floor(maxX); x++) {
+        if (x === 0) continue;
+        ctx.fillText(String(x), toX(x), (minY <= 0 && maxY >= 0) ? toY(0) + 20 : h - pad/2 + 15);
+      }
+      for (let y = Math.ceil(minY); y <= Math.floor(maxY); y++) {
+        if (y === 0) continue;
+        ctx.fillText(String(y), (minX <= 0 && maxX >= 0) ? toX(0) - 20 : pad/2 - 15, toY(y));
+      }
+
+      return { toX, toY, w, h };
+    }
+
+    function drawGraph(example, stepIndex) {
+      if (!example.graphNeeded) return;
+      
+      const xInt = example.point.x;
+      const yInt = example.point.y;
+      
+      const minX = Math.min(-2, xInt - 4);
+      const maxX = Math.max(8, xInt + 4);
+      const minY = Math.min(-3, yInt - 4);
+      const maxY = Math.max(8, yInt + 4);
+      
+      const { toX, toY } = baseGrid(minX, maxX, minY, maxY);
+
+      example.lines.forEach((line) => {
+        const xA = minX, yA = line.m * xA + line.b;
+        const xB = maxX, yB = line.m * xB + line.b;
+        ctx.strokeStyle = line.color;
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(toX(xA), toY(yA)); ctx.lineTo(toX(xB), toY(yB)); ctx.stroke();
+        
+        if (stepIndex >= example.steps.length - 2) {
+            ctx.fillStyle = line.color;
+            ctx.font = 'bold 22px Heebo';
+            ctx.textAlign = 'center';
+            ctx.direction = 'ltr';
+            const lx = minX + (maxX-minX)*0.8;
+            const ly = line.m * lx + line.b;
+            ctx.fillText(line.label, toX(lx), toY(ly) - 15);
+        }
+      });
+
+      if (stepIndex >= example.steps.length - 1) {
+        const px = toX(xInt), py = toY(yInt);
+        
+        ctx.strokeStyle = '#16a34a';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 6]);
+        ctx.beginPath();
+        ctx.moveTo(px, py); ctx.lineTo(px, toY(0));
+        ctx.moveTo(px, py); ctx.lineTo(toX(0), py);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        ctx.fillStyle = '#16a34a';
+        ctx.beginPath(); ctx.arc(px, py, 8, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // ציור קופסת רקע חצי שקופה כדי שהטקסט לא יתבלגן עם הקווים
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+        ctx.beginPath();
+        ctx.roundRect(px - 75, py - 60, 150, 50, 12);
+        ctx.fill();
+        ctx.strokeStyle = '#16a34a';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // ציור הטקסט באופן מסודר (אמצע למעלה)
+        ctx.fillStyle = '#14532d';
+        ctx.textAlign = 'center';
+        
+        // שורה ראשונה (מפגש הישרים)
+        ctx.direction = 'rtl';
+        ctx.font = '900 18px Heebo';
+        ctx.fillText('מפגש הישרים', px, py - 40);
+        
+        // שורה שנייה (הנקודה)
+        ctx.direction = 'ltr';
+        ctx.font = 'bold 18px Heebo';
+        ctx.fillText(pointText(xInt, yInt), px, py - 18);
+        ctx.restore();
+      }
+    }
+
+    function switchTab(id) {
+      currentTab = Number(id);
+      currentStep = 0;
+      tabButtons.forEach(btn => btn.classList.toggle('פעיל', Number(btn.dataset.tab) === currentTab));
+      renderStep();
+    }
+
+    tabButtons.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+    nextBtn.addEventListener('click', () => {
+      if (currentTab === 4) return;
+      const max = examples[currentTab].steps.length - 1;
+      if (currentStep < max) { currentStep += 1; renderStep(); }
+    });
+    prevBtn.addEventListener('click', () => {
+      if (currentTab === 4) return;
+      if (currentStep > 0) { currentStep -= 1; renderStep(); }
+    });
+    startBtn.addEventListener('click', () => { currentStep = 0; renderStep(); });
+
+    switchTab(1);
+  </script>
+</body>
+</html>
