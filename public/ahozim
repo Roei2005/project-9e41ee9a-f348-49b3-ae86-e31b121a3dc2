@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+
+<head>
+    <script>
+        const SESSION_KEY = 'access_grade8'; 
+        const LOGIN_PAGE = '../index8.html'; 
+        const TIMEOUT_MINUTES = 30;
+
+        function safeRedirect(url) {
+            try {
+                if (window.location.protocol === 'blob:' || window.location.hostname === 'localhost' || window.location.hostname.includes('googleusercontent')) {
+                    console.warn('Preview mode detected: Redirect blocked.');
+                    return;
+                }
+                window.location.replace(url);
+            } catch (e) {
+                console.error('Redirect failed:', e);
+            }
+        }
+
+        try {
+            if (sessionStorage.getItem(SESSION_KEY) !== 'true') {
+                if (window.location.protocol === 'blob:' || window.location.hostname.includes('googleusercontent')) {
+                    sessionStorage.setItem(SESSION_KEY, 'true');
+                } else {
+                    safeRedirect(LOGIN_PAGE);
+                }
+            }
+        } catch (e) { console.error(e); }
+
+        let inactivityTimer;
+        function resetTimer() {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(() => {
+                try {
+                    sessionStorage.removeItem(SESSION_KEY);
+                    safeRedirect(LOGIN_PAGE);
+                } catch (e) { console.error(e); }
+            }, TIMEOUT_MINUTES * 60 * 1000);
+        }
+
+        ['load', 'mousemove', 'keypress', 'click', 'touchstart'].forEach(ev => 
+            window.addEventListener(ev, resetTimer)
+        );
+
+        document.addEventListener('contextmenu', event => event.preventDefault());
+        document.addEventListener('keydown', event => {
+            if (event.key === 'F12' || (event.ctrlKey && (event.key === 'u' || event.key === 'I'))) {
+                event.preventDefault();
+            }
+        });
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>מאסטר האחוזים - הלוח החכם</title>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Rubik', sans-serif; background-color: #f8fafc; -webkit-tap-highlight-color: transparent; overflow-y: scroll; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .fade-in { animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+        .slide-up { animation: slideUp 0.5s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 36px; width: 36px; border-radius: 50%; background: #4f46e5; margin-top: -14px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 4px solid white; cursor: pointer; transition: transform 0.1s; }
+        input[type=range]::-webkit-slider-thumb:active { transform: scale(1.1); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 10px; background: #cbd5e1; border-radius: 5px; }
+
+        .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 2px solid rgba(255, 255, 255, 0.5); box-shadow: 0 20px 40px -15px rgba(0,0,0,0.05); }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col text-slate-800">
+    <div id="root" class="flex-grow"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const Icon = ({ path, size = 32, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {path}
+            </svg>
+        );
+
+        const icons = {
+            book: <Icon path={<><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path></>} />,
+            magic: <Icon path={<><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></>} />,
+            money: <Icon path={<><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></>} />,
+            board: <Icon path={<><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></>} />,
+            bulb: <Icon path={<><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"></path></>} />,
+            check: <Icon path={<><polyline points="20 6 9 17 4 12"></polyline></>} />,
+        };
+
+        const MathLtr = ({ children, className="" }) => (
+            <span className={`font-mono font-bold inline-block mx-1 ${className}`} dir="ltr">{children}</span>
+        );
+
+        const Fraction = ({ n, d, className="", size="text-2xl" }) => (
+            <span className={`inline-flex flex-col items-center justify-center align-middle font-mono mx-2 ${className}`} dir="ltr">
+                <span className={`border-b-[3px] border-current px-2 leading-none w-full text-center pb-1 ${size}`}>{n}</span>
+                <span className={`leading-none w-full text-center pt-1 ${size}`}>{d}</span>
+            </span>
+        );
+
+        const PerFrom = ({ pct, num }) => (
+            <div className="inline-flex items-center gap-2 font-mono font-bold mx-2 align-middle text-inherit" dir="rtl">
+                <span dir="ltr">{pct}%</span>
+                <span className="font-sans font-medium text-[0.8em]">מ-</span>
+                <span dir="ltr">{num}</span>
+            </div>
+        );
+
+        const BasicsTab = () => {
+            const [whole, setWhole] = useState(400);
+            const [percent, setPercent] = useState(25);
+            const part = (whole * percent) / 100;
+
+            return (
+                <div className="max-w-5xl mx-auto space-y-12 fade-in">
+                    <div className="text-center bg-white p-12 rounded-[3rem] shadow-xl border border-slate-100">
+                        <h2 className="text-5xl md:text-6xl font-black mb-6 text-slate-800">מה זה בכלל אחוז? 🧐</h2>
+                        <p className="text-3xl text-slate-600 leading-relaxed max-w-4xl mx-auto">
+                            אחוז הוא פשוט דרך להגיד <strong className="text-indigo-600">"חלק מתוך 100"</strong>. <br/>
+                            כדי למצוא כמה שווה אחוז מסוים ממספר שלם, משתמשים בנוסחה הבאה:
+                        </p>
+                        
+                        <div className="mt-12 bg-indigo-50 p-8 rounded-3xl inline-block border-4 border-indigo-200">
+                            <div className="flex items-center justify-center gap-6 text-4xl md:text-6xl font-black text-slate-700" dir="ltr">
+                                <div className="flex flex-col items-center">
+                                    <Fraction n="אחוז" d="100" size="text-3xl md:text-5xl" className="text-indigo-600 font-rubik" />
+                                </div>
+                                <span className="text-slate-400">×</span>
+                                <div className="flex flex-col items-center">
+                                    <span className="text-purple-600 font-rubik">השלם</span>
+                                </div>
+                                <span className="text-slate-400">=</span>
+                                <div className="flex flex-col items-center">
+                                    <span className="text-emerald-600 font-rubik">החלק</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-10 rounded-[3rem] shadow-lg border border-slate-100">
+                        <h3 className="text-4xl font-black text-center mb-10">בואו נשחק עם הנוסחה:</h3>
+                        <div className="flex flex-col md:flex-row items-center justify-center gap-8 text-5xl font-black text-slate-700 mb-12" dir="ltr">
+                            <div className="flex flex-col items-center">
+                                <Fraction n={percent} d="100" size="text-4xl md:text-6xl" className="text-indigo-600" />
+                            </div>
+                            <span className="text-slate-300">×</span>
+                            <span className="text-purple-600 bg-purple-50 px-6 py-2 rounded-2xl">{whole}</span>
+                            <span className="text-slate-300">=</span>
+                            <span className="bg-emerald-100 px-8 py-4 rounded-3xl text-emerald-600 border-4 border-emerald-200 shadow-inner">
+                                {part % 1 === 0 ? part : part.toFixed(1)}
+                            </span>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-12 px-4">
+                            <div className="bg-indigo-50 p-8 rounded-3xl border-2 border-indigo-100">
+                                <div className="flex justify-between mb-6 text-2xl font-bold">
+                                    <label className="text-slate-600">שנה את האחוז:</label>
+                                    <span className="text-indigo-600">{percent}%</span>
+                                </div>
+                                <input type="range" min="0" max="100" step="5" value={percent} onChange={e => setPercent(Number(e.target.value))} className="w-full" />
+                            </div>
+                            <div className="bg-purple-50 p-8 rounded-3xl border-2 border-purple-100">
+                                <div className="flex justify-between mb-6 text-2xl font-bold">
+                                    <label className="text-slate-600">שנה את השלם:</label>
+                                    <span className="text-purple-600">{whole}</span>
+                                </div>
+                                <input type="range" min="0" max="1000" step="50" value={whole} onChange={e => setWhole(Number(e.target.value))} className="w-full" style={{filter: 'hue-rotate(60deg)'}}/>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Magic Square Section */}
+                    <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-10 rounded-[3rem] shadow-xl border-4 border-indigo-100 mt-12 overflow-hidden relative">
+                        <div className="absolute -top-20 -left-20 w-64 h-64 bg-indigo-200 rounded-full blur-3xl opacity-50"></div>
+                        <h3 className="text-5xl font-black text-center mb-8 text-indigo-800 flex items-center justify-center gap-4 relative z-10">
+                            {icons.magic} ריבוע הקסם
+                        </h3>
+                        <p className="text-3xl text-center text-slate-700 mb-8 leading-relaxed relative z-10">
+                            כשיש לנו אחוז וכמות אחת, אבל חסר לנו מספר אחר (למשל ה- <strong className="text-indigo-700 text-4xl">100%</strong> השלם), נסדר בטבלה חכמה:<br/>
+                        </p>
+                        <div className="bg-white/60 p-6 rounded-3xl mb-12 shadow-inner border border-white relative z-10">
+                            <p className="text-2xl text-slate-800 font-bold text-center">
+                                לדוגמה: לסוחר יש 42 בקבוקי יין המהווים 28% מכלל הבקבוקים שברשותו. כמה בקבוקים בסך הכול יש לסוחר?
+                            </p>
+                        </div>
+                        <div className="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-12 text-3xl font-bold relative z-10">
+                            <div className="bg-white p-8 rounded-3xl shadow-md border-4 border-indigo-200 w-full md:w-72 text-center transform hover:scale-105 transition-transform">
+                                <div className="text-slate-500 mb-4 text-3xl font-black border-b-2 pb-2">אחוז</div>
+                                <div className="text-indigo-600 font-black text-6xl mb-6 bg-indigo-50 rounded-xl py-2" dir="ltr">28%</div>
+                                <div className="text-indigo-400 font-black text-5xl mt-6 pt-6 border-t-2 border-dashed bg-indigo-50/50 rounded-xl py-2" dir="ltr">100%</div>
+                            </div>
+                            <div className="flex md:flex-col justify-center items-center gap-4 text-slate-400">
+                                <div className="bg-slate-100/80 px-6 py-2 rounded-xl text-2xl text-slate-600 font-bold hidden md:block">מתאים ל- ➔</div>
+                                <span className="text-4xl md:hidden">↓</span>
+                                <div className="w-full md:w-2 h-2 md:h-20 border-t-4 md:border-t-0 md:border-l-4 border-dashed border-slate-400"></div>
+                                <span className="text-4xl md:hidden">↓</span>
+                                <div className="bg-slate-100/80 px-6 py-2 rounded-xl text-2xl text-slate-600 font-bold hidden md:block">מתאים ל- ➔</div>
+                            </div>
+                            <div className="bg-white p-8 rounded-3xl shadow-md border-4 border-purple-200 w-full md:w-72 text-center transform hover:scale-105 transition-transform">
+                                <div className="text-slate-500 mb-4 text-3xl font-black border-b-2 pb-2">כמות בקבוקים</div>
+                                <div className="text-purple-600 font-black text-6xl mb-6 bg-purple-50 rounded-xl py-2" dir="ltr">42</div>
+                                <div className="text-purple-400 font-black text-7xl mt-6 pt-6 border-t-2 border-dashed bg-purple-50/50 rounded-xl py-2" dir="ltr">?</div>
+                            </div>
+                        </div>
+                        <div className="mt-12 bg-indigo-600 text-white p-10 rounded-[2rem] text-3xl text-center shadow-2xl leading-relaxed relative z-10 border-4 border-indigo-400">
+                            <p className="mt-2 mb-6 font-bold text-yellow-200 bg-black/20 p-4 rounded-xl border border-white/10 inline-block shadow-inner">
+                                הערה: יש המון דרכים לפתור את ריבוע הקסם. הנה הדרך המהירה תמיד:
+                            </p>
+                            <h4 className="text-5xl font-black text-white block mb-8">כפל באלכסון וחילוק בשלישי!</h4>
+                            
+                            <div className="space-y-6 text-right w-fit mx-auto bg-white/10 p-8 rounded-3xl border border-white/20">
+                                <p>1. נכפיל את המספרים שבאותו אלכסון (אחד מול השני):</p>
+                                <div dir="ltr" className="font-mono bg-white text-indigo-900 px-6 py-3 rounded-2xl mx-auto inline-flex items-center gap-4 shadow-inner font-black text-4xl">
+                                    42 × 100 = 4,200
+                                </div> 
+                                
+                                <p className="mt-8">2. נחלק במספר השלישי שנותר בודד (28):</p>
+                                <div dir="ltr" className="font-mono bg-emerald-400 text-emerald-900 px-8 py-3 rounded-2xl mx-auto inline-flex items-center shadow-md font-black text-5xl">
+                                    <Fraction n="4,200" d="28" size="text-4xl" className="text-emerald-900 border-emerald-900"/> = 150
+                                </div>
+                            </div>
+                            <p className="mt-8 text-4xl font-black bg-emerald-500 p-4 rounded-xl shadow-lg border border-emerald-300">לסוחר יש 150 בקבוקים בסך הכל!</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const TricksTab = () => {
+            return (
+                <div className="max-w-6xl mx-auto space-y-10 fade-in">
+                    <h2 className="text-5xl md:text-6xl font-black text-center text-slate-800 mb-4">טריקי קסם לחישוב מהיר ✨</h2>
+                    <p className="text-3xl text-center text-slate-500 mb-12">מחשבים הכל בקלות בלי מחשבון!</p>
+                    
+                    <div className="grid md:grid-cols-2 gap-8">
+                        <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-10 rounded-[3rem] border-4 border-blue-200 shadow-lg transform hover:-translate-y-2 transition-transform">
+                            <div className="bg-blue-600 text-white font-black text-5xl inline-block px-6 py-3 rounded-2xl mb-6 shadow-md">10%</div>
+                            <h3 className="text-3xl font-bold text-slate-800 mb-4 leading-relaxed">מורידים אפס או מזיזים נקודה שמאלה. <br/><span className="text-blue-700 bg-blue-100 px-4 py-1 rounded-xl mt-2 inline-block">אפשר פשוט להגיד: לחלק ב- 10!</span></h3>
+                            <ul className="text-3xl space-y-6 text-slate-700 mt-8 font-mono font-bold" dir="ltr">
+                                <li className="flex justify-between items-center border-b border-blue-200 pb-4">
+                                    <PerFrom pct="10" num="450" /> 
+                                    <span className="text-blue-600 bg-white px-4 py-2 rounded-xl shadow-sm" dir="ltr">➔ 45</span>
+                                </li>
+                                <li className="flex justify-between items-center border-b border-blue-200 pb-4 mt-4">
+                                    <PerFrom pct="10" num="85" /> 
+                                    <span className="text-blue-600 bg-white px-4 py-2 rounded-xl shadow-sm" dir="ltr">➔ 8.5</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div className="bg-gradient-to-br from-purple-50 to-fuchsia-50 p-10 rounded-[3rem] border-4 border-purple-200 shadow-lg transform hover:-translate-y-2 transition-transform">
+                            <div className="bg-purple-600 text-white font-black text-5xl inline-block px-6 py-3 rounded-2xl mb-6 shadow-md">1%</div>
+                            <h3 className="text-3xl font-bold text-slate-800 mb-4 leading-relaxed">מזיזים את הנקודה העשרונית <span className="text-purple-600 underline">פעמיים</span> שמאלה (כי מחלקים ב-100).</h3>
+                            <ul className="text-3xl space-y-6 text-slate-700 mt-8 font-mono font-bold" dir="ltr">
+                                <li className="flex justify-between items-center border-b border-purple-200 pb-4">
+                                    <PerFrom pct="1" num="300" />
+                                    <span className="text-purple-600 bg-white px-4 py-2 rounded-xl shadow-sm" dir="ltr">➔ 3</span>
+                                </li>
+                                <li className="flex justify-between items-center border-b border-purple-200 pb-4 mt-4">
+                                    <PerFrom pct="1" num="45" /> 
+                                    <span className="text-purple-600 bg-white px-4 py-2 rounded-xl shadow-sm" dir="ltr">➔ 0.45</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-8">
+                        <div className="bg-white p-10 rounded-[3rem] shadow-md border-2 border-slate-200">
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="bg-emerald-500 text-white font-black text-4xl px-4 py-2 rounded-xl">25%</div>
+                                <h3 className="text-3xl font-bold text-slate-700">לחלק ב-4</h3>
+                            </div>
+                            <p className="text-2xl text-slate-600 mb-6">25% הם בדיוק רבע (<Fraction n="1" d="4" size="text-xl"/>). לכן פשוט מחלקים את השלם ב-4.</p>
+                            <div className="bg-emerald-50 p-6 rounded-2xl text-3xl font-bold text-center border border-emerald-200 flex items-center justify-center gap-4 flex-wrap" dir="ltr">
+                                <PerFrom pct="25" num="80" /> <span dir="ltr">➔ <Fraction n="80" d="4"/> = <span className="text-emerald-600 text-4xl bg-white px-4 py-2 rounded-xl shadow-sm">20</span></span>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-10 rounded-[3rem] shadow-md border-2 border-slate-200">
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="bg-orange-500 text-white font-black text-4xl px-4 py-2 rounded-xl">15%</div>
+                                <h3 className="text-3xl font-bold text-slate-700">בונים את האחוז</h3>
+                            </div>
+                            <p className="text-2xl text-slate-600 mb-6">15% מורכב מ-10% ועוד חצי מהם (שזה 5%).</p>
+                            <div className="bg-orange-50 p-6 rounded-2xl text-2xl font-bold border border-orange-200 flex flex-col gap-4" dir="ltr">
+                                <div className="flex items-center gap-2"><PerFrom pct="10" num="60" /> <span dir="ltr">= 6</span></div>
+                                <div className="flex items-center gap-2 flex-wrap"><PerFrom pct="5" num="60" /> <span dir="ltr">= 3</span> <span className="text-lg text-slate-500 font-sans ml-4 bg-white px-3 py-1 rounded-lg" dir="rtl">(חצי מ- 6)</span></div>
+                                <div className="border-t-2 border-orange-300 pt-4 text-orange-700 flex items-center gap-2" dir="ltr"><span className="font-mono">15% = 6 + 3 =</span> <span className="text-4xl font-black bg-white px-4 py-1 rounded-xl shadow-sm font-mono">9</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-gradient-to-r from-yellow-300 to-amber-400 p-12 rounded-[3rem] shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-2xl -translate-x-10 translate-y-10"></div>
+                        <h3 className="text-4xl md:text-5xl font-black text-amber-900 mb-6 flex items-center gap-4">
+                            👑 טריק הכתר: חוק החילוף!
+                        </h3>
+                        <p className="text-3xl text-amber-900 mb-8 font-medium">
+                            באחוזים מותר להפוך את המספרים והתוצאה תישאר זהה! 
+                        </p>
+                        <div className="bg-white/90 p-8 rounded-3xl text-center shadow-inner">
+                            <p className="text-3xl font-bold text-slate-700 mb-4 flex items-center justify-center gap-2 flex-wrap">קשה לכם לחשב כמה זה <span className="text-red-500 line-through decoration-4 mx-2"><PerFrom pct="80" num="25" /></span>?</p>
+                            <p className="text-4xl font-black text-indigo-600 mb-8 mt-4 flex items-center justify-center gap-4 flex-wrap">הפכו את זה! חשבו: <span className="bg-indigo-100 px-4 py-2 rounded-xl"><PerFrom pct="25" num="80" /></span></p>
+                            <p className="text-3xl text-slate-600 flex items-center justify-center gap-4 flex-wrap">כמו שלמדנו למעלה, 25% זה לחלק ב-4. <span dir="ltr"><Fraction n="80" d="4" size="text-4xl"/> <span className="text-5xl font-black text-emerald-500 bg-emerald-50 px-4 py-2 rounded-2xl border-2 border-emerald-200">= 20</span></span></p>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const MultipliersTab = () => {
+            const [revealed, setRevealed] = useState({ a: false, b: false, c: false });
+
+            const Box = ({ id, text, answer, color }) => (
+                <div className="bg-white p-8 rounded-3xl shadow-lg border-2 border-slate-100 text-3xl flex flex-col md:flex-row items-center justify-between gap-6 cursor-pointer hover:border-indigo-300 transition-all" onClick={() => setRevealed(prev => ({...prev, [id]: true}))}>
+                    <div className="flex-1 leading-relaxed text-slate-700 font-medium" dangerouslySetInnerHTML={{__html: text}}></div>
+                    <div className={`min-w-[200px] h-20 rounded-2xl flex items-center justify-center font-black text-4xl transition-all duration-500 ${revealed[id] ? `bg-${color}-100 text-${color}-700 border-4 border-${color}-300 shadow-inner` : 'bg-slate-100 text-slate-400 border-4 border-dashed border-slate-300 hover:bg-slate-200'}`} dir="ltr">
+                        {revealed[id] ? answer : 'לחץ לגלות!'}
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="max-w-5xl mx-auto space-y-12 fade-in pb-10">
+                    <div className="text-center bg-slate-800 text-white p-12 rounded-[3rem] shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-[-50%] right-[-10%] w-96 h-96 bg-indigo-500 rounded-full blur-3xl opacity-30"></div>
+                        <h2 className="text-5xl md:text-6xl font-black mb-6 relative z-10">הנחה והתייקרות בכפל אחד 🛒</h2>
+                        <p className="text-3xl opacity-90 max-w-4xl mx-auto leading-relaxed relative z-10">
+                            כדי לחשב מחיר חדש לא חייבים למצוא את האחוז ואז לחבר או לחסר. <br/>הכי חכם לחשב הכל ישירות דרך הכפלה של השלם!
+                        </p>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-8">
+                        <div className="bg-red-50 p-10 rounded-3xl border-4 border-red-200 shadow-md">
+                            <h3 className="text-4xl font-black text-red-700 mb-6 text-center">📈 התייקרות (+ מע"מ / טיפ)</h3>
+                            <p className="text-2xl text-slate-700 mb-6">השלם שלנו הוא 100%. אם יש התייקרות של 40%, המחיר החדש יהיה <strong className="font-mono">140%</strong>.</p>
+                            <div className="bg-white p-6 rounded-2xl text-center text-3xl font-black text-slate-800 border-2 border-red-100 shadow-sm flex flex-wrap items-center justify-center gap-4" dir="ltr">
+                                140% = <Fraction n="140" d="100"/> = <span className="text-red-600 text-5xl bg-red-50 px-4 py-2 rounded-xl">1.40</span>
+                            </div>
+                            <p className="text-3xl text-center mt-6 font-bold text-red-800">פשוט כופלים ב- <MathLtr>1.40</MathLtr>!</p>
+                        </div>
+
+                        <div className="bg-emerald-50 p-10 rounded-3xl border-4 border-emerald-200 shadow-md">
+                            <h3 className="text-4xl font-black text-emerald-700 mb-6 text-center">📉 הוזלה (- מבצע / סוף עונה)</h3>
+                            <p className="text-2xl text-slate-700 mb-6">השלם שלנו הוא 100%. אם יש הוזלה של 20%, המחיר החדש שנשלם יהיה <strong className="font-mono">80%</strong>.</p>
+                            <div className="bg-white p-6 rounded-2xl text-center text-3xl font-black text-slate-800 border-2 border-emerald-100 shadow-sm flex flex-wrap items-center justify-center gap-4" dir="ltr">
+                                80% = <Fraction n="80" d="100"/> = <span className="text-emerald-600 text-5xl bg-emerald-50 px-4 py-2 rounded-xl">0.80</span>
+                            </div>
+                            <p className="text-3xl text-center mt-6 font-bold text-emerald-800">פשוט כופלים ב- <MathLtr>0.80</MathLtr>!</p>
+                        </div>
+                    </div>
+
+                    <div className="mt-12 bg-white p-10 rounded-[3rem] shadow-xl border-2 border-slate-100">
+                        <h3 className="text-4xl font-black text-center mb-10">בואו נתרגל: השלימו את הטענות</h3>
+                        <div className="space-y-6">
+                            <Box id="a" text="(א) התייקרות של <span class='text-red-500 font-black'>40%</span> שקולה לכפל ב-" answer="1.40" color="red" />
+                            <Box id="b" text="(ב) הוזלה של <span class='text-emerald-500 font-black'>14%</span> שקולה לכפל ב-" answer="0.86" color="emerald" />
+                            <Box id="c" text="(ג) כפל ב- <span class='text-indigo-500 font-black font-mono' dir='ltr'>1.8</span> שקול לגידול של" answer="80%" color="indigo" />
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const WordProblemsTab = () => {
+            const [activeId, setActiveId] = useState(null);
+            const [step, setStep] = useState(0); 
+
+            const wordProblems = [
+                {
+                    id: 'q1',
+                    title: 'שאלה 1 - השוואת אחוזים',
+                    question: '20% מ- 45 הם כמו 5% מתוך איזה מספר?',
+                    trick: (
+                        <div className="text-3xl space-y-6 leading-loose">
+                            <p>בואו נשתמש בטריקים שלנו למציאת <PerFrom pct="20" num="45" />!</p>
+                            <ul className="list-disc list-inside space-y-4 font-bold text-indigo-800 bg-white/50 p-6 rounded-2xl">
+                                <li>קודם כל: <PerFrom pct="10" num="45" />. נזיז נקודה שמאלה ונקבל <MathLtr>4.5</MathLtr>.</li>
+                                <li>20% זה פי 2. אז <MathLtr>4.5 × 2 = 9</MathLtr>.</li>
+                            </ul>
+                            <p>השאלה שלנו עכשיו קלה יותר: <br/> <span className="bg-yellow-200 px-4 py-2 rounded-xl mt-2 inline-block shadow-sm">5% מאיזה מספר שווים ל- 9?</span></p>
+                        </div>
+                    ),
+                    solution: (
+                        <div className="text-3xl space-y-8 leading-loose">
+                            <p>הבנו ש- 5% מהמספר הסודי שלנו שווים ל- 9.</p>
+                            <p>איך מגיעים מ- 5% ל- 100% (המספר השלם)? נבדוק כמה פעמים 5 נכנס ב- 100:</p>
+                            <div className="flex items-center justify-center gap-4 text-5xl font-black bg-white p-6 rounded-2xl border-2 border-slate-100" dir="ltr">
+                                <Fraction n="100" d="5" /> = 20
+                            </div>
+                            <p>כלומר 100% גדולים מ- 5% בדיוק פי 20. <br/>לכן נכפיל את ה- 9 שלנו ב- 20:</p>
+                            <div className="text-6xl text-emerald-600 text-center font-black bg-emerald-50 p-6 rounded-2xl border-4 border-emerald-200 w-fit mx-auto shadow-inner" dir="ltr">
+                                9 × 20 = 180
+                            </div>
+                        </div>
+                    )
+                },
+                {
+                    id: 'q2',
+                    title: 'שאלה 2 - כיתת התלמידים',
+                    question: 'בכיתה 30 תלמידים. 40% מתוכם בנים והשאר בנות.\n\n(א) מהו מספר הבנות בכיתה?\n(ב) האם ייתכן ש- 30% מהבנות הן בעלות שיער שחור?',
+                    trick: (
+                        <div className="text-3xl space-y-6 leading-loose">
+                            <p><strong>טיפ לסעיף א':</strong> שוב נשתמש בטריק ה- 10% המפורסם!</p>
+                            <p className="bg-white p-6 rounded-2xl border-r-8 border-sky-400 shadow-sm">
+                                מה זה <PerFrom pct="10" num="30" />? מורידים אפס (לחלק ב-10) ומקבלים 3.<br/><br/>
+                                40% זה בעצם 4 פעמים 10%... אז פשוט מכפילים את ה- 3 ב- 4!
+                            </p>
+                        </div>
+                    ),
+                    solution: (
+                        <div className="text-3xl space-y-8 leading-loose">
+                            <div className="bg-white p-8 rounded-3xl shadow-sm border-2 border-slate-200">
+                                <h3 className="font-black text-4xl text-indigo-600 mb-6 border-b-2 pb-4">סעיף א': מציאת מספר הבנות</h3>
+                                <p>הבנים הם 40%. נחשב: <MathLtr>10% = 3</MathLtr>. לכן <MathLtr>40% = 3 × 4 = 12</MathLtr> בנים.</p>
+                                <p className="mt-6 font-bold bg-emerald-50 p-6 rounded-xl text-emerald-800 text-4xl text-center border border-emerald-200">הבנות הן השאר: <MathLtr>30 - 12 = 18</MathLtr> בנות.</p>
+                            </div>
+                            <div className="bg-white p-8 rounded-3xl shadow-sm border-2 border-slate-200">
+                                <h3 className="font-black text-4xl text-indigo-600 mb-6 border-b-2 pb-4">סעיף ב': בנות עם שיער שחור?</h3>
+                                <p>מבקשים לדעת אם הגיוני שיהיו <PerFrom pct="30" num="18" /> בנות עם שיער שחור.</p>
+                                <p>נחשב: <PerFrom pct="10" num="18" /> הם <MathLtr>1.8</MathLtr>.</p>
+                                <p>30% יהיו פי 3: <MathLtr>1.8 × 3 = 5.4</MathLtr>.</p>
+                                <p className="bg-red-100 text-red-800 p-8 rounded-2xl mt-6 font-black text-center text-4xl shadow-sm border-4 border-red-200">
+                                    לא ייתכן! אי אפשר לקבל "0.4 ילדה". כמות אנשים חייבת להיות מספר שלם.
+                                </p>
+                            </div>
+                        </div>
+                    )
+                },
+                {
+                    id: 'q3',
+                    title: 'שאלה 3 - חידת המשפחות',
+                    question: 'ברחוב מסוים מתגוררות 25 משפחות.\nל- 20% יש רק ילד אחד.\nל- 75% מהמשפחות *האחרות* יש שני ילדים, ולשאר - 3 ילדים.\n\nמה נכון לגבי הרחוב הזה?\n(א) מספר המשפחות שלהן יש ילד אחד, גדול ממספר המשפחות שלהן יש 3 ילדים.\n(ב) מספר המשפחות שלהן יש ילד אחד, קטן ממספר המשפחות שלהן יש 3 ילדים.\n(ג) מספר המשפחות שלהן יש ילד אחד, שווה למספר המשפחות שלהן יש 3 ילדים.',
+                    trick: (
+                        <div className="text-3xl space-y-6 leading-loose">
+                            <p>צריך לפתור את זה כמו בלשים, שלב אחרי שלב. 🕵️‍♂️</p>
+                            <div className="grid grid-cols-2 gap-6 text-center mt-6">
+                                <div className="bg-emerald-100 p-8 rounded-3xl border-4 border-emerald-200 shadow-sm">
+                                    <div className="font-black text-5xl text-emerald-700 mb-4 font-mono">20%</div>
+                                    <p>זה בדיוק <strong className="text-emerald-900">חמישית</strong>. נחלק ב- 5.</p>
+                                </div>
+                                <div className="bg-purple-100 p-8 rounded-3xl border-4 border-purple-200 shadow-sm">
+                                    <div className="font-black text-5xl text-purple-700 mb-4 font-mono">75%</div>
+                                    <p>זה <strong className="text-purple-900">שלושה רבעים</strong> (<MathLtr><Fraction n="3" d="4" size="text-2xl"/></MathLtr>). נחלק ב- 4 ונכפול ב- 3.</p>
+                                </div>
+                            </div>
+                            <p className="text-red-700 font-black mt-8 bg-red-50 p-6 rounded-2xl text-center border-2 border-red-200 shadow-sm">
+                                שימו לב למילה "האחרות"! בחישוב ה- 75% צריך לחשב מתוך המשפחות ש*נשארו*, לא מתוך ה- 25 המקוריות.
+                            </p>
+                        </div>
+                    ),
+                    solution: (
+                        <div className="text-3xl space-y-8 leading-loose">
+                            <div className="space-y-8 bg-white p-8 rounded-3xl border-2 border-slate-100 shadow-sm">
+                                <div className="flex items-center gap-6">
+                                    <span className="bg-indigo-600 text-white px-5 py-3 rounded-2xl font-black shadow-md text-4xl">1</span>
+                                    <p><strong>ילד אחד:</strong> 20% (חמישית) מתוך 25.</p>
+                                </div>
+                                <div className="mr-24 bg-slate-50 p-4 rounded-xl border-2 border-slate-200 inline-flex items-center gap-4 font-bold text-4xl shadow-sm font-mono" dir="ltr"><Fraction n="25" d="5"/> = 5</div>
+                                
+                                <div className="flex items-center gap-6 mt-8">
+                                    <span className="bg-indigo-600 text-white px-5 py-3 rounded-2xl font-black shadow-md text-4xl">2</span>
+                                    <p><strong>המשפחות "האחרות":</strong> נוריד את מי שכבר ספרנו.</p>
+                                </div>
+                                <div className="mr-24 bg-slate-50 p-4 rounded-xl border-2 border-slate-200 inline-flex items-center gap-4 font-bold text-4xl shadow-sm font-mono" dir="ltr">25 - 5 = 20</div>
+
+                                <div className="flex items-center gap-6 mt-8">
+                                    <span className="bg-indigo-600 text-white px-5 py-3 rounded-2xl font-black shadow-md text-4xl">3</span>
+                                    <p><strong>שני ילדים:</strong> <PerFrom pct="75" num="20" /> שנותרו.</p>
+                                </div>
+                                <div className="mr-24 bg-slate-50 p-6 rounded-2xl border-2 border-slate-200 block shadow-sm">
+                                    רבע מ- 20 זה 5 <span dir="ltr">(<Fraction n="20" d="4" size="text-xl"/>)</span>.<br/> שלושה רבעים זה <MathLtr>5 × 3 = 15</MathLtr> משפחות.
+                                </div>
+
+                                <div className="flex items-center gap-6 mt-8">
+                                    <span className="bg-indigo-600 text-white px-5 py-3 rounded-2xl font-black shadow-md text-4xl">4</span>
+                                    <p><strong>3 ילדים (השאר):</strong></p>
+                                </div>
+                                <div className="mr-24 bg-slate-50 p-4 rounded-xl border-2 border-slate-200 inline-flex items-center gap-4 font-bold text-4xl shadow-sm font-mono" dir="ltr">20 - 15 = 5</div>
+                            </div>
+                            
+                            <div className="bg-green-100 text-green-900 p-10 rounded-3xl mt-12 text-center border-4 border-green-400 shadow-lg">
+                                <h3 className="font-black text-5xl mb-6">המסקנה:</h3>
+                                <p className="text-4xl">משפחות עם ילד אחד (5) <strong className="underline decoration-4 text-green-800 bg-green-200 px-2 rounded-lg">שווה</strong> למשפחות עם 3 ילדים (5). <br/><span className="text-green-700 font-black bg-white px-6 py-3 rounded-2xl mt-6 inline-block shadow-md">תשובה ג' היא הנכונה!</span></p>
+                            </div>
+                        </div>
+                    )
+                },
+                {
+                    id: 'q4',
+                    title: 'שאלה 4 - הולכים הפוך',
+                    question: 'חלק א\': מחירו של מוצר לאחר התייקרות של 12% הוא 56 ש"ח. חשבו את המחיר המקורי לפנֵי ההתייקרות.\n\nחלק ב\': מחירו של מוצר לאחר הוזלה של 18% הוא 246 ש"ח. חשבו את המחיר לפנֵי ההוזלה.',
+                    trick: (
+                        <div className="text-3xl space-y-8 leading-loose">
+                            <p>כשהמחיר המקורי <strong>חסר</strong> לנו, נשתמש בנעלם <MathLtr>X</MathLtr> ובטריק ה"כפל באחוז" שלמדנו!</p>
+                            <div className="bg-white p-8 rounded-3xl shadow-sm border-2 border-slate-100">
+                                <p className="mb-6 text-4xl"><strong>חלק א':</strong> התייקרות של 12% אומרת שעכשיו המחיר הוא 112% מהמקור.</p>
+                                <div className="font-mono bg-slate-100 p-6 rounded-2xl text-center text-4xl font-bold flex items-center justify-center gap-4 flex-wrap" dir="ltr">112% = <Fraction n="112" d="100"/> = 1.12</div>
+                            </div>
+                            <div className="bg-white p-8 rounded-3xl shadow-sm border-2 border-slate-100">
+                                <p className="mb-6 text-4xl"><strong>חלק ב':</strong> הוזלה של 18% אומרת שנשאר 82% מהמחיר המקורי <span dir="ltr">(<MathLtr>100 - 18</MathLtr>)</span>.</p>
+                                <div className="font-mono bg-slate-100 p-6 rounded-2xl text-center text-4xl font-bold flex items-center justify-center gap-4 flex-wrap" dir="ltr">82% = <Fraction n="82" d="100"/> = 0.82</div>
+                            </div>
+                        </div>
+                    ),
+                    solution: (
+                        <div className="text-3xl space-y-16 leading-loose">
+                            <div className="bg-white p-8 rounded-3xl shadow-sm border-2 border-slate-200">
+                                <h3 className="text-4xl font-black text-indigo-600 mb-8 border-b-2 pb-4">פתרון חלק א' (התייקרות)</h3>
+                                <p className="mb-6">המחיר המקורי כפול 1.12 נותן 56. נכתוב משוואה:</p>
+                                <div className="bg-slate-800 text-white p-10 rounded-[3rem] text-center shadow-xl font-mono" dir="ltr">
+                                    <p className="mb-8 text-6xl text-emerald-400 font-black">X × 1.12 = 56</p>
+                                    <p className="mb-8 text-slate-300 text-3xl font-sans" dir="rtl">נחלק את שני האגפים ב- 1.12</p>
+                                    <div className="flex items-center justify-center gap-4 text-5xl text-sky-400 mb-8 font-bold">
+                                        X = <Fraction n="56" d="1.12" size="text-4xl" />
+                                    </div>
+                                    <p className="text-yellow-300 text-6xl font-black bg-white/10 py-6 rounded-2xl shadow-inner border border-white/20 w-fit mx-auto px-10">X = 50 ₪</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-8 rounded-3xl shadow-sm border-2 border-slate-200">
+                                <h3 className="text-4xl font-black text-indigo-600 mb-8 border-b-2 pb-4">פתרון חלק ב' (הוזלה)</h3>
+                                <p className="mb-6">המחיר המקורי כפול 0.82 נותן 246. נכתוב משוואה:</p>
+                                <div className="bg-slate-800 text-white p-10 rounded-[3rem] text-center shadow-xl font-mono" dir="ltr">
+                                    <p className="mb-8 text-6xl text-emerald-400 font-black">X × 0.82 = 246</p>
+                                    <p className="mb-8 text-slate-300 text-3xl font-sans" dir="rtl">נחלק את שני האגפים ב- 0.82</p>
+                                    <div className="flex items-center justify-center gap-4 text-5xl text-sky-400 mb-8 font-bold">
+                                        X = <Fraction n="246" d="0.82" size="text-4xl"/>
+                                    </div>
+                                    <p className="text-yellow-300 text-6xl font-black bg-white/10 py-6 rounded-2xl shadow-inner border border-white/20 w-fit mx-auto px-10">X = 300 ₪</p>
+                                </div>
+                            </div>
+                        </div>
+                    )
+                },
+                {
+                    id: 'q5',
+                    title: 'שאלה 5 - האולם הגדול',
+                    question: 'באולם יש 600 אנשים. 60% מהם גברים.\n10% מהנשים עזבו את האולם.\n\n(א) כמה אנשים נותרו באולם?\n(ב) מה קרה לאחוז הגברים? (עלה / ירד / לא השתנה)',
+                    trick: (
+                        <div className="text-3xl space-y-6 leading-loose">
+                            <p><strong>טיפ חזק:</strong> במספרים גדולים, תמיד נחפש את ה- 10% ומשם נבנה הכל!</p>
+                            <div className="bg-sky-50 p-10 border-4 border-sky-200 rounded-3xl text-center shadow-sm">
+                                <p className="mb-6 text-4xl">איך נחשב כמה הם <PerFrom pct="60" num="600" />?</p>
+                                <p className="font-bold mb-6">10% מתוך 600 זה מחיקת אפס = 60.</p>
+                                <p className="font-black text-sky-800 text-5xl mt-6 bg-white p-6 rounded-2xl inline-block shadow-sm border-2 border-sky-100">
+                                    לכן 60% יהיו 6 פעמים 60! <br/><span dir="ltr" className="text-4xl mt-4 block font-mono">(<MathLtr>60 × 6</MathLtr>)</span>
+                                </p>
+                            </div>
+                        </div>
+                    ),
+                    solution: (
+                        <div className="text-3xl space-y-8 leading-loose">
+                            <div className="bg-white p-8 rounded-3xl border-2 border-slate-200">
+                                <h3 className="font-black text-4xl text-indigo-600 mb-6 border-b-2 pb-4">סעיף א': מי נמצא באולם?</h3>
+                                <p className="mb-4">גברים (60%): <MathLtr>6 × 60 = 360</MathLtr> גברים.</p>
+                                <p>נשים (השאר): <MathLtr>600 - 360 = 240</MathLtr> נשים.</p>
+                                <div className="mt-10 bg-slate-50 p-8 rounded-3xl border-2 border-slate-200 shadow-sm">
+                                    <p className="font-bold mb-6">10% מהנשים עוזבות. <br/><PerFrom pct="10" num="240" /> מורידים אפס = <strong className="text-red-500 text-4xl bg-white px-4 py-2 rounded-xl border border-red-100 mx-2 shadow-sm font-mono">24</strong> <strong className="text-red-500">נשים עזבו.</strong></p>
+                                    <p className="mt-8 font-black text-5xl bg-emerald-100 p-8 rounded-2xl text-center text-emerald-900 shadow-inner border-4 border-emerald-200">
+                                        נותרו באולם: <br/><MathLtr className="text-emerald-700 mt-4 block font-mono">600 - 24 = 576</MathLtr>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="bg-gradient-to-r from-yellow-100 to-amber-100 p-10 rounded-3xl border-4 border-amber-300 text-center shadow-lg">
+                                <h3 className="font-black text-5xl mb-8">סעיף ב': מה קרה לאחוז הגברים?</h3>
+                                <p className="mb-6 font-medium">כמות הגברים נשארה בדיוק אותו דבר (360), <br/>אבל סך כל האנשים באולם <strong className="text-red-600 font-black">קטן</strong> (מ- 600 ל- 576).</p>
+                                <div className="flex justify-center my-8 text-5xl font-black" dir="ltr">
+                                    <Fraction n="360" d="576" className="text-amber-800 bg-white px-6 py-4 rounded-2xl shadow-sm border-2 border-amber-200"/>
+                                </div>
+                                <p className="text-4xl font-black text-emerald-700 bg-white/80 p-6 rounded-2xl shadow-sm">כשהחלק נשאר זהה אבל השלם קטן - האחוז עולה!</p>
+                                <p className="mt-6 text-4xl font-bold bg-amber-200 p-6 rounded-xl inline-block shadow-md">לכן: <strong>אחוז הגברים באולם עלה.</strong></p>
+                            </div>
+                        </div>
+                    )
+                },
+                {
+                    id: 'q6',
+                    title: 'שאלה 6 - המקדמה על המוצר',
+                    question: 'אדם קנה מוצר ושילם מקדמה של 400 ש"ח.\nהמחיר ששילם מהווה רק 2% ממחיר המוצר.\nאת יתרת הסכום שילם ב- 4 תשלומים שווים.\n\n(א) מהו מחיר המוצר?\n(ב) כמה שילם בכל תשלום?\n(ג) איזה אחוז ממחיר המוצר מהווה כל תשלום?',
+                    trick: (
+                        <div className="text-3xl space-y-8 leading-loose">
+                            <p>כדי למצוא את מחיר המוצר (ה- 100%), נוכל להשתמש ב"ריבוע הקסם" שלמדנו, או בטריק פשוט עוד יותר:</p>
+                            <div className="bg-emerald-50 border-4 border-emerald-200 p-10 rounded-3xl shadow-sm text-center">
+                                <div className="font-black text-6xl mb-6 text-emerald-800 bg-white p-6 rounded-2xl inline-block shadow-sm font-mono" dir="ltr">2% ➔ 400</div>
+                                <p className="text-4xl font-bold">איך מגיעים מ- 2% ל- 100%?<br/> <span className="text-emerald-700 text-5xl mt-4 block bg-emerald-100 p-4 rounded-2xl">פשוט כופלים ב- 50!</span></p>
+                            </div>
+                        </div>
+                    ),
+                    solution: (
+                        <div className="text-3xl space-y-10 leading-loose">
+                            <div className="bg-white p-8 rounded-3xl border-2 border-slate-200 shadow-sm">
+                                <h3 className="font-black text-4xl text-indigo-600 mb-6 border-b-2 pb-4">סעיף א': מחיר המוצר</h3>
+                                <p className="mb-6">אם 2% שווים 400 שקלים, נכפול פי 50 כדי להגיע ל- 100%:</p>
+                                <div className="flex justify-center mt-6">
+                                   <div className="text-5xl text-emerald-600 text-center font-black bg-emerald-50 p-8 rounded-2xl border-4 border-emerald-200 inline-block shadow-inner font-mono" dir="ltr">
+                                        400 × 50 = 20,000
+                                    </div>
+                                </div>
+                                <p className="mt-8 text-4xl font-black text-center bg-slate-100 p-4 rounded-xl border border-slate-200">מחיר המוצר הוא 20,000 ש"ח.</p>
+                            </div>
+                            
+                            <div className="bg-white p-8 rounded-3xl border-2 border-slate-200 shadow-sm">
+                                <h3 className="font-black text-4xl text-indigo-600 mb-6 border-b-2 pb-4">סעיף ב': כמה שילם בכל תשלום?</h3>
+                                <p className="mb-4">קודם נמצא מהי היתרה (כמה נשאר לשלם אחרי המקדמה):</p>
+                                <div className="font-mono text-center text-5xl my-8 font-black text-slate-700 bg-slate-50 p-6 rounded-2xl border-2 border-slate-100" dir="ltr">20,000 - 400 = 19,600</div>
+                                <p className="mb-6">את היתרה חילק ל- 4 תשלומים שווים:</p>
+                                <div className="flex justify-center mt-6 text-5xl font-black bg-sky-50 p-8 rounded-2xl border-4 border-sky-200 w-fit mx-auto text-sky-800 shadow-inner font-mono" dir="ltr">
+                                    <Fraction n="19,600" d="4" /> = 4,900
+                                </div>
+                                <p className="mt-8 font-bold text-center">הוא שילם 4,900 ש"ח בכל תשלום.</p>
+                            </div>
+
+                            <div className="bg-white p-8 rounded-3xl border-2 border-slate-200 shadow-sm">
+                                <h3 className="font-black text-4xl text-indigo-600 mb-6 border-b-2 pb-4">סעיף ג': איזה אחוז מהווה כל תשלום?</h3>
+                                <p className="mb-4">נשארו 98% מהסכום המקורי (כי שולמו 2%).</p>
+                                <p className="mb-6">את ה- 98% חילקנו ל- 4 תשלומים:</p>
+                                <div className="flex justify-center mt-6 text-5xl font-black bg-purple-50 p-8 rounded-2xl border-4 border-purple-200 w-fit mx-auto text-purple-700 shadow-inner font-mono" dir="ltr">
+                                    <Fraction n="98%" d="4" /> = 24.5%
+                                </div>
+                            </div>
+                        </div>
+                    )
+                },
+                {
+                    id: 'q7',
+                    title: 'שאלה 7 - ההוצאות החודשיות',
+                    question: 'אדם הרוויח בחודש מסוים 12,000 ש"ח.\n30% מהסכום הוציא על מזון.\nב- 20% מהסכום *הנותר* קנה בגדים.\n\n(א) כמה כסף הוציא על קניית בגדים?\n(ב) כמה כסף הוציא על קניית מזון?\n(ג) איזה משפט נכון לגבי הסכום שנותר לו?\n (i) יותר מ- 50% מהסכום שהרוויח.\n (ii) פחות מ- 50% מהסכום שהרוויח.\n (iii) בדיוק 50% מהסכום שהרוויח.',
+                    trick: (
+                        <div className="text-3xl space-y-8 leading-loose">
+                            <div className="bg-red-50 text-red-900 p-8 rounded-3xl border-4 border-red-200 shadow-md">
+                                <strong className="text-5xl block mb-6 text-center underline decoration-4">שימו לב למילה "הנותר"!</strong>
+                                <p>אסור לחשב את ה- 20% של הבגדים מתוך ה- 12,000 המקוריים. קודם צריך להחסיר את ההוצאה על המזון!</p>
+                            </div>
+                            <p className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 font-bold">
+                                כדי שיהיה הגיוני לפי סדר הסיפור, הכי קל לחשב קודם את המזון (סעיף ב'), ורק אז את הבגדים (סעיף א').
+                            </p>
+                        </div>
+                    ),
+                    solution: (
+                        <div className="text-3xl space-y-10 leading-loose">
+                            <div className="bg-white p-8 rounded-3xl border-2 border-slate-200 shadow-sm">
+                                <h3 className="font-black text-4xl text-indigo-600 mb-6 border-b-2 pb-4">סעיף ב': הוצאות מזון</h3>
+                                <p className="mb-4">מזון = <PerFrom pct="30" num="12,000" />.</p>
+                                <p className="mb-4">נשתמש בטריק של 10%: מורידים אפס ➔ 1,200.</p>
+                                <p className="mb-6">30% הם פי 3:</p>
+                                 <div className="flex justify-center mt-6 text-5xl font-black bg-blue-50 p-6 rounded-2xl border-4 border-blue-200 w-fit mx-auto shadow-inner text-blue-900 font-mono" dir="ltr">
+                                    1,200 × 3 = 3,600
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-8 rounded-3xl border-2 border-slate-200 shadow-sm">
+                                <h3 className="font-black text-4xl text-indigo-600 mb-6 border-b-2 pb-4">סעיף א': הוצאות בגדים</h3>
+                                <p className="mb-6">קודם נמצא את הסכום <strong className="text-4xl text-red-600 bg-red-50 px-4 py-2 rounded-xl mx-2">הנותר</strong>:</p>
+                                <div className="font-mono text-center text-5xl my-8 text-red-600 font-black bg-slate-50 py-4 rounded-xl border border-slate-200" dir="ltr">12,000 - 3,600 = 8,400</div>
+                                <p className="mb-4">בגדים = <PerFrom pct="20" num="8,400" /> (הסכום הנותר).</p>
+                                <p className="mb-6"><PerFrom pct="10" num="8,400" /> הם 840. <br/>לכן 20% יהיו פי 2:</p>
+                                <div className="flex justify-center mt-6 text-5xl font-black bg-blue-50 p-6 rounded-2xl border-4 border-blue-200 w-fit mx-auto shadow-inner text-blue-900 font-mono" dir="ltr">
+                                    840 × 2 = 1,680
+                                </div>
+                            </div>
+
+                            <div className="bg-gradient-to-r from-emerald-100 to-green-100 p-10 rounded-3xl border-4 border-green-300 shadow-lg">
+                                <h3 className="font-black text-5xl mb-8 text-green-900 border-b-4 border-green-200 pb-4">סעיף ג': מה המצב של הסכום שנותר?</h3>
+                                <p className="mb-6 font-bold">סך כל ההוצאות (מזון + בגדים):</p>
+                                <div className="font-mono text-center text-5xl my-6 font-black text-slate-700 bg-white/60 py-4 rounded-2xl border-2 border-white" dir="ltr">3,600 + 1,680 = 5,280</div>
+                                <p className="mb-6 font-bold mt-10">הסכום שנשאר לו בכיס:</p>
+                                <div className="font-mono text-center text-6xl my-6 text-emerald-800 font-black bg-white p-6 rounded-3xl shadow-md border-4 border-emerald-200" dir="ltr">12,000 - 5,280 = 6,720</div>
+                                <div className="mt-10 font-bold bg-white p-8 rounded-3xl text-4xl shadow-sm">
+                                    <PerFrom pct="50" num="12,000" /> (חצי) הם 6,000. <br/>
+                                    מכיוון ש- 6,720 גדול מ- 6,000, המסקנה היא:<br/>
+                                    <strong className="text-4xl md:text-5xl text-emerald-600 mt-6 block bg-emerald-50 p-6 rounded-2xl text-center border-2 border-emerald-200">הסכום שנותר מהווה יותר מ- 50% מהסכום שהרוויח (משפט i).</strong>
+                                </div>
+                            </div>
+                        </div>
+                    )
+                },
+                {
+                    id: 'q8',
+                    title: 'שאלה 8 - התייקרות כפולה (🔥 שאלה קשה!)',
+                    question: 'מוצר התייקר ב- 10%, ואחר-כך שוב התייקר ב- 10% ממחירו החדש.\nמחירו הסופי הוא 605 ש"ח.\n\n(א) מהו מחירו המקורי של המוצר?\n(ב) חשבו את אחוז ההתייקרות הכללי של המוצר.',
+                    trick: (
+                        <div className="text-3xl space-y-8 leading-loose">
+                            <div className="bg-red-100 text-red-900 p-8 rounded-3xl border-4 border-red-300 shadow-md">
+                                <strong className="text-5xl block mb-6 text-center underline decoration-4">זהירות! מלכודת נפוצה</strong>
+                                <p>התייקרות של 10% ואז שוב התייקרות של 10% <strong>הם לא 20% ביחד!</strong></p>
+                                <p className="mt-4 text-2xl font-bold bg-white/50 p-4 rounded-xl">ההתייקרות השנייה מחושבת מתוך המחיר החדש (שכבר יותר גבוה), ולכן היא מוסיפה יותר כסף מההתייקרות הראשונה.</p>
+                            </div>
+                            <p className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 font-bold">
+                                נשתמש בטריק ההכפלה: במקום לעשות פלוס, נכפיל פעמיים ב- 1.10 (כי 10% התייקרות זה 110%, שזה 1.10).
+                            </p>
+                        </div>
+                    ),
+                    solution: (
+                        <div className="text-3xl space-y-10 leading-loose">
+                            <div className="bg-white p-8 rounded-3xl border-2 border-slate-200 shadow-sm">
+                                <h3 className="font-black text-4xl text-indigo-600 mb-6 border-b-2 pb-4">סעיף א': מחירו המקורי של המוצר</h3>
+                                <p className="mb-6">המחיר המקורי (<MathLtr>X</MathLtr>) הוכפל ב- 1.10 ואז שוב ב- 1.10. התוצאה היא 605.</p>
+                                <div className="bg-slate-800 text-white p-6 md:p-10 rounded-[3rem] text-center shadow-xl font-mono flex flex-col items-center" dir="ltr">
+                                    <p className="mb-8 text-2xl sm:text-3xl md:text-5xl lg:text-6xl text-sky-400 font-black whitespace-nowrap">X × 1.10 × 1.10 = 605</p>
+                                    <p className="mb-8 text-slate-300 text-2xl md:text-3xl font-sans whitespace-normal" dir="rtl">נכפיל את המספרים (1.10 כפול 1.10 זה 1.21)</p>
+                                    <p className="mb-8 text-3xl sm:text-4xl md:text-5xl text-emerald-400 font-black whitespace-nowrap">X × 1.21 = 605</p>
+                                    <p className="mb-8 text-slate-300 text-2xl md:text-3xl font-sans whitespace-normal" dir="rtl">נחלק ב- 1.21</p>
+                                    <div className="flex items-center justify-center gap-4 text-4xl md:text-5xl text-sky-400 mb-8 font-bold whitespace-nowrap">
+                                        X = <Fraction n="605" d="1.21" size="text-3xl md:text-4xl" />
+                                    </div>
+                                    <p className="text-yellow-300 text-4xl sm:text-5xl md:text-6xl font-black bg-white/10 py-6 px-8 md:px-10 rounded-2xl shadow-inner border border-white/20 w-fit mx-auto whitespace-nowrap">X = 500 ₪</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-gradient-to-r from-yellow-100 to-amber-100 p-10 rounded-3xl border-4 border-amber-300 shadow-lg">
+                                <h3 className="font-black text-5xl mb-8 text-amber-900 border-b-4 border-amber-200 pb-4">סעיף ב': אחוז ההתייקרות הכללי</h3>
+                                <p className="mb-6">גילינו שההכפלה הכוללת שעשינו למחיר הייתה <strong className="font-mono">1.21</strong>.</p>
+                                <div className="font-mono text-center text-4xl my-6 font-black text-slate-700 bg-white/60 py-4 rounded-2xl border-2 border-white" dir="ltr">1.21 = <Fraction n="121" d="100"/> = 121%</div>
+                                <div className="mt-10 font-bold bg-white p-8 rounded-3xl text-4xl shadow-sm text-center">
+                                    מכיוון שהתחלנו מ- 100% והגענו ל- 121%, <br/>
+                                    <strong className="text-5xl text-red-600 mt-6 block bg-red-50 p-6 rounded-2xl border-2 border-red-200">ההתייקרות הכללית היא בדיוק 21%.</strong>
+                                </div>
+                            </div>
+                        </div>
+                    )
+                },
+                {
+                    id: 'q9',
+                    title: 'שאלה 9 - יחס ההתייקרות',
+                    question: 'סוחר החליט לייקר את כל הסחורה שבחנותו באותו אחוז.\nמחירם החדש של נעליים שעלו 200 ש"ח, הוא 230 ש"ח.\n\nבכמה ימכור כעת נעליים שמחירם המקורי היה 180 ש"ח?',
+                    trick: (
+                        <div className="text-3xl space-y-8 leading-loose">
+                            <p>אפשר לפתור את השאלה המצוינת הזו בשתי דרכים מבריקות! 💡</p>
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <div className="bg-sky-50 p-8 rounded-3xl border-4 border-sky-200 shadow-sm">
+                                    <h4 className="font-black text-sky-800 text-4xl mb-4">דרך 1: יחס והכפלה</h4>
+                                    <p>יחס התייקרות אומר לנו "פי כמה" המחיר גדל. נמצא פי כמה הוכפל המחיר הראשון (200 ➔ 230), ונכפיל את ה- 180 באותו מספר בדיוק.</p>
+                                </div>
+                                <div className="bg-purple-50 p-8 rounded-3xl border-4 border-purple-200 shadow-sm">
+                                    <h4 className="font-black text-purple-800 text-4xl mb-4">דרך 2: ריבוע הקסם</h4>
+                                    <p>לחשב איזה <strong>אחוז</strong> של התייקרות זה מ- 200 ל- 230, ואז להוסיף את אותו אחוז ל- 180.</p>
+                                </div>
+                            </div>
+                        </div>
+                    ),
+                    solution: (
+                        <div className="text-3xl space-y-12 leading-loose">
+                            <div className="bg-white p-8 rounded-3xl border-4 border-sky-100 shadow-sm">
+                                <h3 className="font-black text-4xl text-sky-700 mb-6 border-b-4 border-sky-200 pb-4">פתרון דרך 1: הכפלה ויחס התייקרות</h3>
+                                <p className="mb-4">יחס ההתייקרות הוא המספר שבו כפלנו את המחיר הישן (200) כדי לקבל את המחיר החדש (230). נחשב אותו בעזרת חילוק:</p>
+                                <div className="flex items-center justify-center gap-4 text-5xl font-black bg-slate-50 p-6 rounded-2xl border-2 border-slate-200 w-fit mx-auto mb-8 font-mono" dir="ltr">
+                                    <Fraction n="230" d="200" /> = 1.15
+                                </div>
+                                <p className="mb-4 font-bold bg-sky-50 p-4 rounded-xl text-center border border-sky-200">כלומר, כל מחיר בחנות מוכפל עכשיו ב- 1.15.</p>
+                                <p className="mb-4">נכפיל את הנעליים השניות באותו יחס:</p>
+                                <div className="font-mono text-center text-5xl font-black text-sky-800 bg-sky-100 p-6 rounded-3xl shadow-inner border-2 border-sky-300" dir="ltr">
+                                    180 × 1.15 = 207
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-8 rounded-3xl border-4 border-purple-100 shadow-sm">
+                                <h3 className="font-black text-4xl text-purple-700 mb-6 border-b-4 border-purple-200 pb-4">פתרון דרך 2: ריבוע הקסם</h3>
+                                <p className="mb-4">המחיר עלה מ- 200 ל- 230, כלומר <strong>התייקר ב- 30 שקלים</strong>.</p>
+                                <p className="mb-6">נבדוק כמה אחוזים הם ה- 30 שקלים מתוך ה- 200 (שהם ה- 100% המקורי):</p>
+                                
+                                <div className="flex flex-col md:flex-row justify-center items-center gap-8 text-3xl font-bold bg-slate-50 p-8 rounded-3xl mb-8 border border-slate-200">
+                                    <div className="bg-white p-6 rounded-3xl shadow-sm border-2 border-indigo-200 w-full md:w-64 text-center">
+                                        <div className="text-slate-500 mb-4 text-3xl font-black border-b-2 pb-2">אחוז</div>
+                                        <div className="text-indigo-600 font-black text-5xl mb-6 bg-indigo-50 rounded-xl py-2" dir="ltr">100%</div>
+                                        <div className="text-indigo-400 font-black text-6xl mt-6 pt-6 border-t-2 border-dashed bg-indigo-50/50 rounded-xl py-2" dir="ltr">?</div>
+                                    </div>
+                                    <div className="flex md:flex-col justify-center items-center gap-4 text-slate-400">
+                                        <div className="bg-slate-200/80 px-4 py-2 rounded-xl text-xl text-slate-600 font-bold hidden md:block">מתאים ל- ➔</div>
+                                        <span className="text-4xl md:hidden">↓</span>
+                                        <div className="w-full md:w-2 h-2 md:h-12 border-t-4 md:border-t-0 md:border-l-4 border-dashed border-slate-300"></div>
+                                        <span className="text-4xl md:hidden">↓</span>
+                                        <div className="bg-slate-200/80 px-4 py-2 rounded-xl text-xl text-slate-600 font-bold hidden md:block">מתאים ל- ➔</div>
+                                    </div>
+                                    <div className="bg-white p-6 rounded-3xl shadow-sm border-2 border-purple-200 w-full md:w-64 text-center">
+                                        <div className="text-slate-500 mb-4 text-3xl font-black border-b-2 pb-2">כמות (ש"ח)</div>
+                                        <div className="text-purple-600 font-black text-5xl mb-6 bg-purple-50 rounded-xl py-2" dir="ltr">200</div>
+                                        <div className="text-purple-400 font-black text-6xl mt-6 pt-6 border-t-2 border-dashed bg-purple-50/50 rounded-xl py-2" dir="ltr">30</div>
+                                    </div>
+                                </div>
+                                
+                                <p className="mb-4">כפל באלכסון (30 × 100 = 3,000) לחלק בשלישי (200):</p>
+                                <div className="font-mono text-center text-5xl font-black text-slate-700 bg-slate-100 p-4 rounded-xl mb-8 flex justify-center gap-4 items-center" dir="ltr"><Fraction n="3,000" d="200" size="text-4xl"/> = 15%</div>
+                                
+                                <p className="mb-4 bg-purple-50 p-6 rounded-2xl border border-purple-200 font-bold">ההתייקרות היא 15%. נחשב 15% התייקרות על הנעליים של 180 ₪:</p>
+                                <ul className="list-disc list-inside space-y-2 font-bold ml-6 mb-6 text-slate-700">
+                                    <li><PerFrom pct="10" num="180" /> הם 18.</li>
+                                    <li><PerFrom pct="5" num="180" /> הם 9 (החצי של 18).</li>
+                                    <li>ביחד 15% הם: 27 ₪ תוספת.</li>
+                                </ul>
+                                <div className="font-mono text-center text-5xl font-black text-purple-800 bg-purple-100 p-6 rounded-3xl shadow-inner border-4 border-purple-300 w-fit mx-auto" dir="ltr">
+                                    180 + 27 = 207 ₪
+                                </div>
+                            </div>
+                        </div>
+                    )
+                },
+                {
+                    id: 'q10',
+                    title: 'שאלה 10 - חידון התנ"ך',
+                    question: 'בחידון תנ"ך יש שני שלבים.\nכדי להעפיל לשלב השני יש לענות נכון לפחות על 70% מהשאלות.\nבשלב א\' היו 24 שאלות.\n\nרן ענה נכון על 14 שאלות.\nדני ענה נכון על 18 שאלות.\nגד ענה נכון על 15 שאלות.\nאיתי ענה נכון על 20 שאלות.\n\nמי מהילדים עלה לשלב הבא? נמקו את תשובתכם.',
+                    trick: (
+                        <div className="text-3xl space-y-6 leading-loose">
+                            <p>במקום לנחש, בואו נחשב במדויק מהו "רף המעבר" לשלב הבא!</p>
+                            <p className="bg-yellow-100 p-8 rounded-3xl shadow-sm border-4 border-yellow-300 text-yellow-900 font-bold">
+                                נחשב כמה שאלות הן בדיוק <PerFrom pct="70" num="24" />. מי שענה על מספר כזה של שאלות (או יותר) – עבר. מי שענה פחות – לא עבר.
+                            </p>
+                        </div>
+                    ),
+                    solution: (
+                        <div className="text-3xl space-y-8 leading-loose">
+                            <div className="bg-white p-8 rounded-3xl shadow-sm border-2 border-slate-200">
+                                <h3 className="font-black text-4xl text-indigo-600 mb-6 border-b-2 pb-4">שלב 1: חישוב רף המעבר</h3>
+                                <p>נחשב <PerFrom pct="70" num="24" />:</p>
+                                <ul className="list-disc list-inside space-y-2 font-bold ml-6 mt-4 mb-6">
+                                    <li><PerFrom pct="10" num="24" /> הם 2.4.</li>
+                                    <li>לכן 70% הם פי 7: <MathLtr>2.4 × 7 = 16.8</MathLtr></li>
+                                </ul>
+                                <div className="font-mono text-center text-5xl my-6 font-black text-slate-700 bg-slate-50 py-4 rounded-xl border border-slate-200 w-fit mx-auto px-10 shadow-inner" dir="ltr">16.8</div>
+                                <p className="font-bold text-red-600 bg-red-50 p-6 rounded-2xl text-center border-2 border-red-200 mt-4">
+                                    מכיוון שאי אפשר לענות על "0.8 שאלה", ילד חייב לענות נכון על <strong className="text-4xl underline decoration-4 mx-2">לפחות 17 שאלות</strong> כדי לעבור!
+                                </p>
+                            </div>
+
+                            <div className="bg-white p-8 rounded-3xl shadow-sm border-2 border-slate-200">
+                                <h3 className="font-black text-4xl text-indigo-600 mb-6 border-b-2 pb-4">שלב 2: מי עבר?</h3>
+                                <div className="grid md:grid-cols-2 gap-6 text-4xl font-bold">
+                                    <div className="bg-red-50 p-6 rounded-2xl border-4 border-red-200 flex flex-col justify-center items-center text-center gap-4">
+                                        <span className="text-slate-700">רן (14)</span>
+                                        <span className="text-red-600 font-black bg-white px-6 py-2 rounded-xl shadow-sm text-3xl">לא עבר ❌</span>
+                                    </div>
+                                    <div className="bg-emerald-50 p-6 rounded-2xl border-4 border-emerald-200 flex flex-col justify-center items-center text-center gap-4">
+                                        <span className="text-slate-700">דני (18)</span>
+                                        <span className="text-emerald-600 font-black bg-white px-6 py-2 rounded-xl shadow-sm text-3xl">עבר! ✅</span>
+                                    </div>
+                                    <div className="bg-red-50 p-6 rounded-2xl border-4 border-red-200 flex flex-col justify-center items-center text-center gap-4">
+                                        <span className="text-slate-700">גד (15)</span>
+                                        <span className="text-red-600 font-black bg-white px-6 py-2 rounded-xl shadow-sm text-3xl">לא עבר ❌</span>
+                                    </div>
+                                    <div className="bg-emerald-50 p-6 rounded-2xl border-4 border-emerald-200 flex flex-col justify-center items-center text-center gap-4">
+                                        <span className="text-slate-700">איתי (20)</span>
+                                        <span className="text-emerald-600 font-black bg-white px-6 py-2 rounded-xl shadow-sm text-3xl">עבר! ✅</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="bg-indigo-50 p-8 rounded-3xl border-4 border-indigo-200 mt-10 shadow-inner text-center">
+                                <p className="text-5xl font-black text-indigo-600 bg-white p-6 rounded-2xl shadow-md border-2 border-indigo-100 inline-block w-full">רק דני ואיתי עלו לשלב הבא!</p>
+                            </div>
+                        </div>
+                    )
+                }
+            ];
+
+            const handleSelect = (id) => {
+                setActiveId(id);
+                setStep(0);
+            };
+
+            if (!activeId) {
+                return (
+                    <div className="max-w-6xl mx-auto fade-in">
+                        <h2 className="text-5xl md:text-6xl font-black text-center text-slate-800 mb-6">שאלות מילוליות לכיתה 📚</h2>
+                        <p className="text-3xl text-center text-slate-500 mb-12">השאלות הקשות ביותר הופכות קלות עם טריקים!</p>
+                        
+                        <div className="grid md:grid-cols-2 gap-8">
+                            {wordProblems.map((p, i) => (
+                                <button 
+                                    key={p.id} 
+                                    onClick={() => handleSelect(p.id)}
+                                    className={`bg-white p-10 rounded-[3rem] shadow-lg border-4 transition-all group text-right flex flex-col justify-between min-h-[250px] relative overflow-hidden ${p.title.includes('🔥') ? 'border-amber-300 hover:border-amber-500 hover:shadow-amber-200/50' : 'border-transparent hover:border-indigo-400'} hover:shadow-2xl`}
+                                >
+                                    <div className={`absolute -top-4 -left-4 w-24 h-24 rounded-full group-hover:scale-[2] transition-transform duration-500 z-0 ${p.title.includes('🔥') ? 'bg-amber-50' : 'bg-indigo-50'}`}></div>
+                                    <div className="relative z-10">
+                                        <div className="flex justify-between items-center mb-6">
+                                            <span className={`${p.title.includes('🔥') ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-indigo-100 text-indigo-800'} font-black px-6 py-2 rounded-2xl text-2xl shadow-sm`}>{p.title}</span>
+                                            <span className="text-slate-300 group-hover:text-indigo-400 transition-colors scale-150">{icons.board}</span>
+                                        </div>
+                                        <h3 className="text-3xl font-bold text-slate-800 mb-4 leading-tight whitespace-pre-wrap line-clamp-3">{p.question.split('\n')[0]}...</h3>
+                                    </div>
+                                    <div className={`relative z-10 text-2xl font-bold flex items-center gap-3 mt-6 ${p.title.includes('🔥') ? 'text-amber-700' : 'text-indigo-600'}`}>
+                                        לפתרון מודרך בשלבים <span className="text-3xl transition-transform group-hover:-translate-x-3">←</span>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                );
+            }
+
+            const activeProblem = wordProblems.find(p => p.id === activeId);
+
+            return (
+                <div className="max-w-6xl mx-auto fade-in slide-up pb-20">
+                    <button onClick={() => setActiveId(null)} className="mb-10 text-3xl font-bold text-slate-500 hover:text-indigo-600 flex items-center gap-3 bg-white px-8 py-4 rounded-full shadow-md hover:shadow-lg transition-all w-fit border-2 border-slate-100">
+                        ➜ חזרה לרשימת השאלות
+                    </button>
+
+                    <div className="glass-card rounded-[4rem] overflow-hidden p-10 md:p-16 relative shadow-2xl border-4 border-indigo-50">
+                        <div className="mb-12">
+                            <h2 className="text-4xl text-indigo-500 font-black mb-8 inline-block bg-indigo-50 px-6 py-2 rounded-2xl border-2 border-indigo-100">{activeProblem.title}</h2>
+                            <h1 className="text-3xl md:text-4xl font-bold text-slate-800 leading-loose whitespace-pre-wrap bg-white p-8 rounded-3xl shadow-sm border border-slate-100">{activeProblem.question}</h1>
+                        </div>
+
+                        {activeProblem.options && step === 0 && (
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
+                                {activeProblem.options.map((opt, i) => (
+                                    <div key={i} className="bg-slate-50 text-center p-8 rounded-3xl text-4xl font-mono font-black text-slate-600 border-4 border-slate-200 shadow-sm hover:border-indigo-300 transition-colors">
+                                        {opt}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <div className="flex flex-col sm:flex-row gap-8 border-t-4 border-slate-100 pt-12">
+                            {step < 1 && (
+                                <button onClick={() => setStep(1)} className="flex-1 bg-gradient-to-r from-yellow-300 to-yellow-400 hover:from-yellow-400 hover:to-yellow-500 text-yellow-900 text-4xl font-black py-8 rounded-[2rem] shadow-xl transition-transform hover:-translate-y-2 flex items-center justify-center gap-4">
+                                    {icons.bulb} גלה לי טריק לחשיבה!
+                                </button>
+                            )}
+                            
+                            {step >= 1 && step < 2 && (
+                                <button onClick={() => setStep(2)} className="flex-1 bg-gradient-to-r from-emerald-400 to-emerald-500 hover:from-emerald-500 hover:to-emerald-600 text-white text-4xl font-black py-8 rounded-[2rem] shadow-xl transition-transform hover:-translate-y-2 flex items-center justify-center gap-4 fade-in">
+                                    {icons.check} הצג פתרון מלא
+                                </button>
+                            )}
+                        </div>
+
+                        {step >= 1 && (
+                            <div className="mt-12 bg-yellow-50 border-[6px] border-yellow-300 rounded-[3rem] p-10 md:p-14 fade-in relative shadow-lg">
+                                <div className="absolute top-0 right-14 -translate-y-1/2 bg-yellow-400 text-yellow-900 font-black px-8 py-3 rounded-2xl text-2xl shadow-md border-2 border-yellow-200">
+                                    כיוון חשיבה (טריק) 💡
+                                </div>
+                                {activeProblem.trick}
+                            </div>
+                        )}
+
+                        {step >= 2 && (
+                            <div className="mt-16 bg-slate-50 border-[6px] border-emerald-400 rounded-[3rem] p-10 md:p-14 fade-in relative shadow-lg">
+                                <div className="absolute top-0 right-14 -translate-y-1/2 bg-emerald-500 text-white font-black px-8 py-3 rounded-2xl text-2xl shadow-md border-2 border-emerald-300">
+                                    הפתרון המלא צעד-אחר-צעד 🎯
+                                </div>
+                                {activeProblem.solution}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('basics');
+
+            const menu = [
+                { id: 'basics', label: 'הנוסחה והבסיס', icon: icons.book },
+                { id: 'tricks', label: 'טריקי הקסם', icon: icons.magic },
+                { id: 'multipliers', label: 'כסף והכפלות', icon: icons.money },
+                { id: 'questions', label: 'שאלות מהחיים', icon: icons.board },
+            ];
+
+            return (
+                <div className="min-h-screen pb-24 md:pb-12 bg-[#f8fafc] font-rubik relative overflow-hidden">
+                    <div className="fixed top-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-200/40 rounded-full blur-[120px] z-0 pointer-events-none"></div>
+                    <div className="fixed bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-indigo-200/30 rounded-full blur-[120px] z-0 pointer-events-none"></div>
+
+                    <div className="bg-white/90 backdrop-blur-xl border-b-2 border-slate-200 sticky top-0 z-50 shadow-sm relative z-10 mb-10">
+                        <div className="max-w-7xl mx-auto px-6">
+                            <div className="flex justify-between items-center py-4">
+                                <div className="flex items-center gap-6">
+                                    <div className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white p-4 rounded-2xl shadow-lg shadow-indigo-200/50 transform rotate-3">
+                                        <Icon path={<><line x1="19" y1="5" x2="5" y2="19"></line><circle cx="6.5" cy="6.5" r="3"></circle><circle cx="17.5" cy="17.5" r="3"></circle></>} size={36} />
+                                    </div>
+                                    <div>
+                                        <h1 className="text-4xl font-black text-slate-800 tracking-tight drop-shadow-sm">מאסטר האחוזים</h1>
+                                        <p className="text-slate-500 font-bold text-xl tracking-wide">מצב לוח חכם לכיתה</p>
+                                    </div>
+                                </div>
+                                <div className="hidden lg:flex gap-3 bg-slate-100/50 p-2 rounded-2xl border border-slate-200">
+                                    {menu.map(item => (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => setActiveTab(item.id)}
+                                            className={`flex items-center gap-3 px-8 py-4 font-black text-2xl rounded-xl transition-all
+                                                ${activeTab === item.id 
+                                                    ? 'bg-white text-indigo-600 shadow-md border-2 border-indigo-100 scale-105' 
+                                                    : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700'
+                                                }`}
+                                        >
+                                            {item.icon}
+                                            <span>{item.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t-[3px] border-slate-200 z-50 shadow-[0_-10px_20px_rgba(0,0,0,0.1)] pb-safe">
+                        <div className="flex justify-around items-center p-3">
+                            {menu.map(item => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => setActiveTab(item.id)}
+                                    className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all flex-1
+                                        ${activeTab === item.id 
+                                            ? 'text-indigo-600 bg-indigo-50 font-black shadow-inner border border-indigo-100' 
+                                            : 'text-slate-400 font-bold hover:bg-slate-50'
+                                        }`}
+                                >
+                                    {React.cloneElement(item.icon, { size: activeTab === item.id ? 32 : 28 })}
+                                    <span className="text-sm md:text-lg">{item.label}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <main className="max-w-[1000px] mx-auto p-8 relative z-10 pb-32">
+                        {activeTab === 'basics' && <BasicsTab />}
+                        {activeTab === 'tricks' && <TricksTab />}
+                        {activeTab === 'multipliers' && <MultipliersTab />}
+                        {activeTab === 'questions' && <WordProblemsTab />}
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
