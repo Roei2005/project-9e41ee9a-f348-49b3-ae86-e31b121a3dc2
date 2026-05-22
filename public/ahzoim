@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+
+<head>
+    <script>
+        // --- הגדרות אבטחה ---
+        const SESSION_KEY = 'access_grade8'; 
+        const LOGIN_PAGE = '../index8.html'; 
+        const TIMEOUT_MINUTES = 30;
+
+        // --- תיקון לשגיאת Redirect בסביבת תצוגה ---
+        function safeRedirect(url) {
+            try {
+                if (window.location.protocol === 'blob:' || window.location.hostname === 'localhost' || window.location.hostname.includes('googleusercontent')) {
+                    console.warn('Preview mode detected: Redirect blocked.');
+                    return;
+                }
+                window.location.replace(url);
+            } catch (e) {
+                console.error('Redirect failed:', e);
+            }
+        }
+
+        // 1. בדיקת כניסה
+        try {
+            if (sessionStorage.getItem(SESSION_KEY) !== 'true') {
+                if (window.location.protocol === 'blob:' || window.location.hostname.includes('googleusercontent')) {
+                    sessionStorage.setItem(SESSION_KEY, 'true');
+                } else {
+                    safeRedirect(LOGIN_PAGE);
+                }
+            }
+        } catch (e) { console.error(e); }
+
+        // 2. ניתוק אוטומטי
+        let inactivityTimer;
+        function resetTimer() {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(() => {
+                try {
+                    sessionStorage.removeItem(SESSION_KEY);
+                    safeRedirect(LOGIN_PAGE);
+                } catch (e) { console.error(e); }
+            }, TIMEOUT_MINUTES * 60 * 1000);
+        }
+
+        ['load', 'mousemove', 'keypress', 'click', 'touchstart'].forEach(ev => 
+            window.addEventListener(ev, resetTimer)
+        );
+
+        // 3. חסימת F12
+        document.addEventListener('contextmenu', event => event.preventDefault());
+        document.addEventListener('keydown', event => {
+            if (event.key === 'F12' || (event.ctrlKey && (event.key === 'u' || event.key === 'I'))) {
+                event.preventDefault();
+            }
+        });
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>מאסטר האחוזים - לימוד והבנה</title>
+
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Rubik', sans-serif; background-color: #f8fafc; -webkit-tap-highlight-color: transparent; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Custom Range Slider */
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 28px; width: 28px; border-radius: 50%; background: #4f46e5; margin-top: -12px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border: 3px solid white; cursor: pointer; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; background: #cbd5e1; border-radius: 3px; }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col text-slate-800 bg-slate-50">
+    <div id="root" class="flex-grow"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- אייקונים ---
+        const Icon = ({ path, size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {path}
+            </svg>
+        );
+
+        const icons = {
+            percent: <Icon path={<><line x1="19" y1="5" x2="5" y2="19"></line><circle cx="6.5" cy="6.5" r="2.5"></circle><circle cx="17.5" cy="17.5" r="2.5"></circle></>} />,
+            calculator: <Icon path={<><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="16" y1="14" x2="16" y2="18"></line><path d="M16 10h.01"></path><path d="M12 10h.01"></path><path d="M8 10h.01"></path><path d="M12 14h.01"></path><path d="M8 14h.01"></path><path d="M12 18h.01"></path><path d="M8 18h.01"></path></>} />,
+            magic: <Icon path={<><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></>} />,
+            shop: <Icon path={<><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></>} />,
+            gym: <Icon path={<><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></>} />,
+            home: <Icon path={<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></>} />
+        };
+
+        // --- רכיבים לשימוש חוזר ---
+        const Card = ({ children, className = "", title }) => (
+            <div className={`bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden ${className}`}>
+                {title && <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 font-bold text-slate-700">{title}</div>}
+                <div className="p-6">{children}</div>
+            </div>
+        );
+
+        // רכיב לשבר אנכי (קו שבר אמיתי)
+        const Fraction = ({ n, d, className="", color="text-slate-800" }) => (
+            <div className={`inline-flex flex-col items-center justify-center align-middle font-mono mx-1 ${className} ${color}`} dir="ltr">
+                <span className="border-b-2 border-current px-1 leading-none w-full text-center pb-0.5">{n}</span>
+                <span className="leading-none w-full text-center pt-0.5">{d}</span>
+            </div>
+        );
+
+        // --- 1. לשונית יסודות והמרות (מתוקן) ---
+        const BasicsTab = () => {
+            const [val, setVal] = useState(50);
+            
+            const gcd = (a, b) => b ? gcd(b, a % b) : a;
+            const divisor = gcd(val, 100);
+            const reducedN = val / divisor;
+            const reducedD = 100 / divisor;
+            const isReduced = divisor > 1 && val > 0;
+
+            return (
+                <div className="space-y-6 fade-in max-w-4xl mx-auto">
+                    <div className="grid md:grid-cols-2 gap-6 items-start">
+                        {/* צד ימין: ויזואלי */}
+                        <Card title="המשמעות הויזואלית" className="order-1 md:order-2 border-t-4 border-t-indigo-500">
+                            <div className="text-center mb-6">
+                                <span className="text-6xl font-black text-indigo-600 tracking-tighter">{val}%</span>
+                                <div className="text-slate-400 text-sm font-bold mt-1">חלק מתוך 100</div>
+                            </div>
+
+                            <div className="flex justify-center mb-8">
+                                <div className="grid grid-cols-10 gap-1.5 bg-slate-100 p-4 rounded-3xl w-fit border border-slate-200 shadow-inner">
+                                    {Array.from({ length: 100 }).map((_, i) => (
+                                        <div key={i} className={`w-3 h-3 sm:w-5 sm:h-5 rounded-md transition-all duration-300 ${i < val ? 'bg-indigo-500 shadow-sm scale-105' : 'bg-white'}`} />
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            <div className="px-2">
+                                <input 
+                                    type="range" min="0" max="100" value={val} 
+                                    onChange={(e) => setVal(Number(e.target.value))}
+                                    className="w-full cursor-pointer"
+                                />
+                            </div>
+                        </Card>
+
+                        {/* צד שמאל: טבלת המרות אופקית */}
+                        <Card title="טבלת ההמרות" className="order-2 md:order-1 border-t-4 border-t-emerald-500">
+                            <div className="flex flex-col gap-6">
+                                {/* שורה 1: אחוז */}
+                                <div className="flex items-center justify-between bg-slate-50 p-4 rounded-xl">
+                                    <div className="text-slate-500 font-bold">אחוז (%)</div>
+                                    <div className="text-3xl font-black text-indigo-600">{val}%</div>
+                                </div>
+
+                                {/* שורה 2: שבר עשרוני */}
+                                <div className="flex items-center justify-between bg-slate-50 p-4 rounded-xl">
+                                    <div className="text-slate-500 font-bold">עשרוני</div>
+                                    <div className="text-3xl font-black text-purple-600 font-mono" dir="ltr">0.{val < 10 ? '0' + val : val}</div>
+                                </div>
+
+                                {/* שורה 3: שבר פשוט + צמצום */}
+                                <div className="bg-slate-50 p-4 rounded-xl min-h-[140px] flex flex-col justify-center">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <div className="text-slate-500 font-bold">שבר</div>
+                                    </div>
+                                    
+                                    <div className="flex items-center justify-center gap-6" dir="ltr">
+                                        {/* השבר המקורי */}
+                                        <div className="flex flex-col items-center">
+                                            <Fraction n={val} d="100" className="text-2xl font-bold text-slate-600" />
+                                        </div>
+
+                                        {/* חץ הצמצום */}
+                                        {isReduced && (
+                                            <div className="flex flex-col items-center animate-pulse">
+                                                <div className="text-emerald-500 text-2xl">➔</div>
+                                                <div className="text-[10px] uppercase font-bold text-emerald-600 bg-emerald-100 px-1.5 rounded tracking-wider">צמצום</div>
+                                            </div>
+                                        )}
+                                        {!isReduced && <div className="w-8"></div>} {/* Spacer to prevent jumping */}
+
+                                        {/* השבר המצומצם */}
+                                        <div className="flex flex-col items-center w-16">
+                                            {isReduced ? (
+                                                <Fraction n={reducedN} d={reducedD} className="text-3xl font-black text-emerald-600 scale-110" />
+                                            ) : (
+                                                <div className="text-slate-300 text-xs">אין צמצום</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 2. לשונית הנוסחה (עם שאלה מילולית) ---
+        const FormulaTab = () => {
+            const [whole, setWhole] = useState(730);
+            const [percent, setPercent] = useState(83);
+            const part = (whole * percent) / 100;
+
+            return (
+                <div className="max-w-3xl mx-auto space-y-8 fade-in">
+                    {/* השאלה המילולית */}
+                    <div className="bg-indigo-600 text-white p-6 rounded-3xl text-center shadow-lg transform -rotate-1">
+                        <h2 className="text-2xl md:text-4xl font-black leading-tight">
+                            "כמה זה <span className="text-yellow-300 underline decoration-4 decoration-yellow-300/30">{percent}%</span> מתוך <span className="text-yellow-300 underline decoration-4 decoration-yellow-300/30">{whole}</span>?"
+                        </h2>
+                    </div>
+
+                    <Card className="bg-white border-none shadow-2xl ring-1 ring-slate-100 p-8 md:p-12">
+                        {/* הנוסחה */}
+                        <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8 text-3xl md:text-5xl font-black text-slate-700" dir="ltr">
+                            
+                            {/* שבר האחוז */}
+                            <div className="flex flex-col items-center">
+                                <Fraction n={percent} d="100" color="text-indigo-600" />
+                                <span className="text-sm font-medium text-slate-400 mt-2">האחוז</span>
+                            </div>
+
+                            <span className="text-slate-300">×</span>
+
+                            {/* השלם */}
+                            <div className="flex flex-col items-center">
+                                <span className="text-purple-600">{whole}</span>
+                                <span className="text-sm font-medium text-slate-400 mt-6">השלם</span>
+                            </div>
+
+                            <span className="text-slate-300">=</span>
+
+                            {/* התוצאה */}
+                            <div className="flex flex-col items-center">
+                                <span className="bg-emerald-50 px-4 py-2 rounded-xl text-emerald-600 border-2 border-emerald-100">
+                                    {part.toLocaleString(undefined, {maximumFractionDigits: 2})}
+                                </span>
+                                <span className="text-sm font-medium text-slate-400 mt-4">התשובה</span>
+                            </div>
+                        </div>
+                    </Card>
+
+                    <div className="grid md:grid-cols-2 gap-8 px-4">
+                        <div className="bg-white p-6 rounded-2xl border border-slate-200">
+                            <div className="flex justify-between mb-4">
+                                <label className="font-bold text-slate-600 text-lg">שנה את האחוז</label>
+                                <span className="font-black text-indigo-600 text-2xl">{percent}%</span>
+                            </div>
+                            <input type="range" min="0" max="100" value={percent} onChange={e => setPercent(Number(e.target.value))} className="w-full accent-indigo-600" />
+                        </div>
+                        <div className="bg-white p-6 rounded-2xl border border-slate-200">
+                            <div className="flex justify-between mb-4">
+                                <label className="font-bold text-slate-600 text-lg">שנה את השלם</label>
+                                <span className="font-black text-purple-600 text-2xl">{whole}</span>
+                            </div>
+                            <input type="range" min="0" max="1000" step="10" value={whole} onChange={e => setWhole(Number(e.target.value))} className="w-full accent-purple-600" />
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 3. לשונית טריקים (מודגש וברור) ---
+        const MagicTab = () => {
+            const tricks = [
+                { title: "10%", desc: "מורידים 0 אחרון", ex: "10% מ-80 ⬅ 8", color: "bg-blue-500" },
+                { title: "50%", desc: "בדיוק חצי (לחלק ל-2)", ex: "50% מ-40 ⬅ 20", color: "bg-purple-500" },
+                { title: "25%", desc: "רבע (לחלק ל-4)", ex: "25% מ-100 ⬅ 25", color: "bg-pink-500" },
+                { title: "1%", desc: "להזיז נקודה פעמיים", ex: "1% מ-250 ⬅ 2.5", color: "bg-indigo-500" },
+            ];
+
+            const bonusExamples = [
+                { q: "8% מתוך 25", flipped: "25% מתוך 8", ans: "2" },
+                { q: "14% מתוך 50", flipped: "50% מתוך 14", ans: "7" },
+                { q: "4% מתוך 75", flipped: "75% מתוך 4", ans: "3" },
+            ];
+
+            return (
+                <div className="max-w-3xl mx-auto space-y-8 fade-in px-2">
+                    <h2 className="text-4xl font-black text-center text-slate-800">קיצורי דרך</h2>
+                    
+                    <div className="grid md:grid-cols-2 gap-4">
+                        {tricks.map((t, i) => (
+                            <div key={i} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex items-center gap-4 hover:shadow-md transition-all hover:-translate-y-1">
+                                <div className={`${t.color} text-white w-16 h-16 rounded-2xl flex items-center justify-center font-black text-2xl shadow-lg shrink-0`}>
+                                    {t.title}
+                                </div>
+                                <div>
+                                    <div className="font-bold text-xl text-slate-800 mb-1">{t.desc}</div>
+                                    <div className="text-slate-500 font-mono font-bold bg-slate-50 px-2 py-1 rounded w-fit">{t.ex}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* טריק הבונוס - בולט וברור */}
+                    <div className="relative mt-12 bg-gradient-to-br from-indigo-50 to-white border-2 border-indigo-200 p-8 rounded-3xl shadow-xl overflow-hidden">
+                        <div className="absolute top-0 right-0 bg-yellow-400 text-indigo-900 font-black px-6 py-2 rounded-bl-2xl shadow-sm">
+                            טריק בונוס מטורף! ✨
+                        </div>
+                        
+                        <div className="mt-8">
+                            <h3 className="text-2xl font-bold text-indigo-900 mb-4">חוק החילוף (היפוך)</h3>
+                            <p className="text-slate-600 text-lg mb-6">
+                                קשה לחשב <span className="font-bold text-red-500">X% מתוך Y</span>? <br/>
+                                פשוט תהפכו! חשבו <span className="font-bold text-emerald-600">Y% מתוך X</span>. התוצאה זהה!
+                            </p>
+
+                            <div className="grid md:grid-cols-3 gap-4">
+                                {bonusExamples.map((ex, i) => (
+                                    <div key={i} className="bg-white p-4 rounded-xl border border-indigo-100 shadow-sm text-center">
+                                        <div className="text-red-400 line-through decoration-2 text-sm mb-1">{ex.q}</div>
+                                        <div className="text-2xl font-bold text-slate-300 mb-1">⬇</div>
+                                        <div className="text-emerald-600 font-bold text-lg mb-2">{ex.flipped}</div>
+                                        <div className="bg-indigo-600 text-white font-black rounded-lg py-1">{ex.ans}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 4. לשונית החנות (דוגמאות מורחבות וברורות) ---
+        const ShopTab = () => {
+            const [activeLesson, setActiveLesson] = useState(null); 
+
+            // דוגמה להנחה
+            const renderDiscountExample = () => (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 max-w-2xl mx-auto">
+                    <button onClick={() => setActiveLesson(null)} className="text-indigo-600 font-bold mb-4 flex items-center gap-1 hover:bg-indigo-50 px-3 py-1 rounded-lg w-fit transition">➜ חזרה לתפריט</button>
+                    
+                    <div className="bg-white rounded-3xl border-2 border-slate-100 overflow-hidden shadow-xl">
+                        <div className="bg-emerald-50 p-6 border-b border-emerald-100 flex justify-between items-center">
+                            <h3 className="font-black text-emerald-800 text-2xl">דוגמה: הנחה על חולצה</h3>
+                            <span className="bg-white px-3 py-1 rounded-lg font-bold text-emerald-600 border border-emerald-200 shadow-sm">20% הנחה</span>
+                        </div>
+                        
+                        <div className="p-8 space-y-8">
+                            <div className="flex justify-between items-end border-b border-slate-100 pb-6">
+                                <div>
+                                    <div className="text-slate-500 font-bold mb-1">מחיר מקורי</div>
+                                    <div className="text-5xl font-black text-slate-800">150 ₪</div>
+                                </div>
+                                <div className="text-left">
+                                    <div className="text-slate-500 font-bold mb-1">אחוז ההנחה</div>
+                                    <div className="text-3xl font-bold text-emerald-500">20%</div>
+                                </div>
+                            </div>
+
+                            {/* שלב 1: חישוב הערך */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-3">
+                                    <span className="bg-slate-800 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg">1</span>
+                                    <p className="text-xl font-bold text-slate-700">שלב ראשון: כמה שקלים זה 20%?</p>
+                                </div>
+                                
+                                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                                    <div className="flex items-center gap-4 text-3xl md:text-4xl font-black text-slate-600 justify-center" dir="ltr">
+                                        <Fraction n="20" d="100" />
+                                        <span>×</span>
+                                        <span>150</span>
+                                        <span>=</span>
+                                        <span className="text-emerald-600">30</span>
+                                    </div>
+                                    <div className="text-center mt-4 text-slate-400 font-medium">
+                                        (חישוב: 20 כפול 150 לחלק ל-100 שווה 30)
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* שלב 2: החיסור */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-3">
+                                    <span className="bg-slate-800 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg">2</span>
+                                    <p className="text-xl font-bold text-slate-700">שלב שני: נחסר מהמחיר המקורי</p>
+                                </div>
+                                
+                                <div className="bg-emerald-50 p-6 rounded-2xl border border-emerald-100 text-center">
+                                    <div className="flex items-center justify-center gap-4 text-3xl md:text-5xl font-black text-slate-800" dir="ltr">
+                                        <span>150</span>
+                                        <span className="text-emerald-500">-</span>
+                                        <span className="text-emerald-600">30</span>
+                                        <span>=</span>
+                                        <span className="text-slate-900 bg-white px-4 py-1 rounded-xl shadow-sm border border-emerald-200">120 ₪</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            // דוגמה להתייקרות
+            const renderTaxExample = () => (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 max-w-2xl mx-auto">
+                    <button onClick={() => setActiveLesson(null)} className="text-indigo-600 font-bold mb-4 flex items-center gap-1 hover:bg-indigo-50 px-3 py-1 rounded-lg w-fit transition">➜ חזרה לתפריט</button>
+                    
+                    <div className="bg-white rounded-3xl border-2 border-slate-100 overflow-hidden shadow-xl">
+                        <div className="bg-red-50 p-6 border-b border-red-100 flex justify-between items-center">
+                            <h3 className="font-black text-red-800 text-2xl">דוגמה: תוספת מע"מ/טיפ</h3>
+                            <span className="bg-white px-3 py-1 rounded-lg font-bold text-red-600 border border-red-200 shadow-sm">17% מע"מ</span>
+                        </div>
+                        
+                        <div className="p-8 space-y-8">
+                            <div className="flex justify-between items-end border-b border-slate-100 pb-6">
+                                <div>
+                                    <div className="text-slate-500 font-bold mb-1">מחיר בסיס</div>
+                                    <div className="text-5xl font-black text-slate-800">200 ₪</div>
+                                </div>
+                                <div className="text-left">
+                                    <div className="text-slate-500 font-bold mb-1">תוספת</div>
+                                    <div className="text-3xl font-bold text-red-500">17%</div>
+                                </div>
+                            </div>
+
+                            {/* שלב 1: חישוב הערך */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-3">
+                                    <span className="bg-slate-800 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg">1</span>
+                                    <p className="text-xl font-bold text-slate-700">שלב ראשון: כמה שקלים זה 17%?</p>
+                                </div>
+                                
+                                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                                    <div className="flex items-center gap-4 text-3xl md:text-4xl font-black text-slate-600 justify-center" dir="ltr">
+                                        <Fraction n="17" d="100" />
+                                        <span>×</span>
+                                        <span>200</span>
+                                        <span>=</span>
+                                        <span className="text-red-600">34</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* שלב 2: החיבור */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-3">
+                                    <span className="bg-slate-800 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg">2</span>
+                                    <p className="text-xl font-bold text-slate-700">שלב שני: נוסיף למחיר המקורי</p>
+                                </div>
+                                
+                                <div className="bg-red-50 p-6 rounded-2xl border border-red-100 text-center">
+                                    <div className="flex items-center justify-center gap-4 text-3xl md:text-5xl font-black text-slate-800" dir="ltr">
+                                        <span>200</span>
+                                        <span className="text-red-500">+</span>
+                                        <span className="text-red-600">34</span>
+                                        <span>=</span>
+                                        <span className="text-slate-900 bg-white px-4 py-1 rounded-xl shadow-sm border border-red-200">234 ₪</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            if (activeLesson === 'discount') return renderDiscountExample();
+            if (activeLesson === 'tax') return renderTaxExample();
+
+            return (
+                <div className="max-w-xl mx-auto fade-in text-center space-y-8 py-8 px-4">
+                    <h2 className="text-4xl font-black text-slate-800">איך מחשבים כסף?</h2>
+                    
+                    <button 
+                        onClick={() => setActiveLesson('discount')}
+                        className="w-full bg-white p-8 rounded-3xl shadow-sm border-2 border-slate-100 hover:border-emerald-400 hover:shadow-xl transition-all group text-right transform hover:-translate-y-1"
+                    >
+                        <div className="flex items-center justify-between mb-4">
+                            <span className="bg-emerald-100 text-emerald-800 font-black px-4 py-2 rounded-xl text-lg">ירידה במחיר</span>
+                            <span className="text-5xl group-hover:scale-110 transition-transform">📉</span>
+                        </div>
+                        <h3 className="text-3xl font-black text-slate-800 mb-2">איך מחשבים הנחה?</h3>
+                        <p className="text-slate-500 text-lg">מבצעים, סוף עונה וקופונים.</p>
+                    </button>
+
+                    <button 
+                        onClick={() => setActiveLesson('tax')}
+                        className="w-full bg-white p-8 rounded-3xl shadow-sm border-2 border-slate-100 hover:border-red-400 hover:shadow-xl transition-all group text-right transform hover:-translate-y-1"
+                    >
+                        <div className="flex items-center justify-between mb-4">
+                            <span className="bg-red-100 text-red-800 font-black px-4 py-2 rounded-xl text-lg">עלייה במחיר</span>
+                            <span className="text-5xl group-hover:scale-110 transition-transform">📈</span>
+                        </div>
+                        <h3 className="text-3xl font-black text-slate-800 mb-2">איך מחשבים התייקרות?</h3>
+                        <p className="text-slate-500 text-lg">טיפים, מע"מ וריבית.</p>
+                    </button>
+                </div>
+            );
+        };
+
+        // --- 5. לשונית המבחן הגדול (20 שאלות, הסברים מפורטים) ---
+        const GymTab = () => {
+            const [qIndex, setQIndex] = useState(0);
+            const [showAnswer, setShowAnswer] = useState(false);
+            const [selectedOption, setSelectedOption] = useState(null);
+            const [score, setScore] = useState(0);
+            const [isFinished, setIsFinished] = useState(false);
+
+            // מאגר שאלות מקיף
+            const questions = [
+                { q: "כמה הם 50% מתוך 80?", a: 40, opts: [20, 40, 60, 80], exp: <div className="text-lg">50% זה בדיוק חצי.<br/>חצי מ-80 הם <span className="font-bold">40</span>.</div> },
+                { q: "איך כותבים 1/4 באחוזים?", a: 25, opts: [20, 25, 40, 50], exp: <div className="text-lg">רבע מהשלם (100) הם 25.<br/>לכן התשובה היא <span className="font-bold">25%</span>.</div> },
+                { q: "כמה הם 10% מתוך 350?", a: 35, opts: [3.5, 35, 350, 30], exp: <div className="text-lg">כדי למצוא 10%, מורידים את האפס האחרון.<br/>350 הופך ל-<span className="font-bold">35</span>.</div> },
+                { q: "כמה הם 1% מתוך 200?", a: 2, opts: [20, 2, 0.2, 1], exp: <div className="text-lg">1% אומר לחלק ב-100.<br/>200 לחלק ל-100 שווה <span className="font-bold">2</span>.</div> },
+                { q: "חולצה עולה 100 ₪. יש 30% הנחה. מה המחיר הסופי?", a: 70, opts: [30, 70, 130, 60], exp: <div className="flex flex-col items-center gap-2" dir="ltr"><span>30% of 100 = 30</span><span>100 - 30 = <span className="font-bold">70</span></span></div> },
+                { q: "כמה הם 20% מתוך 50?", a: 10, opts: [5, 10, 15, 20], exp: <div className="flex items-center gap-2 text-xl font-bold" dir="ltr"><Fraction n="20" d="100"/> × 50 = 10</div> },
+                { q: "מהו השלם אם 50% ממנו הם 10?", a: 20, opts: [5, 10, 20, 100], exp: <div className="text-lg">אם חצי (50%) זה 10,<br/>אז השלם הוא פי 2: <span className="font-bold">20</span>.</div> },
+                { q: "כמה הם 200% מתוך 6?", a: 12, opts: [6, 12, 60, 3], exp: <div className="text-lg">200% זה פי 2.<br/>6 כפול 2 שווה <span className="font-bold">12</span>.</div> },
+                { q: "השתמשו בטריק: 4% מתוך 25?", a: 1, opts: [1, 4, 10, 25], exp: <div className="text-lg">נהפוך את זה: 25% מתוך 4.<br/>רבע מ-4 זה <span className="font-bold">1</span>.</div> },
+                { q: "מוצר עלה 50 ₪ והתייקר ב-10%. כמה הוא עולה עכשיו?", a: 55, opts: [50, 55, 60, 45], exp: <div className="flex flex-col items-center gap-2" dir="ltr"><span>10% of 50 = 5</span><span>50 + 5 = <span className="font-bold">55</span></span></div> },
+                { q: "כמה הם 3/4 באחוזים?", a: 75, opts: [25, 50, 75, 80], exp: <div className="text-lg">רבע זה 25%, אז שלושה רבעים זה 25 כפול 3,<br/>כלומר <span className="font-bold">75%</span>.</div> },
+                { q: "כמה הם 0.5 באחוזים?", a: 50, opts: [5, 50, 0.5, 500], exp: <div className="text-lg">0.5 זה חצי, וחצי זה <span className="font-bold">50%</span>.</div> },
+                { q: "כמה הם 100% מתוך 99?", a: 99, opts: [1, 99, 100, 198], exp: <div className="text-lg">100% זה הכל. המספר נשאר אותו דבר: <span className="font-bold">99</span>.</div> },
+                { q: "כמה הם 10% מתוך 55?", a: 5.5, opts: [5, 5.5, 0.55, 550], exp: <div className="text-lg">מזיזים את הנקודה שמאלה פעם אחת.<br/>55 הופך ל-<span className="font-bold">5.5</span>.</div> },
+                { q: "כמה הם 25% מתוך 40?", a: 10, opts: [5, 10, 20, 25], exp: <div className="text-lg">25% זה רבע. לחלק ב-4.<br/>40 לחלק ל-4 זה <span className="font-bold">10</span>.</div> },
+                { q: "הנחה של 50% ואז עוד 50% הנחה על היתרה. כמה נשאר לשלם?", a: 25, opts: [0, 25, 50, 75], exp: <div className="text-lg">אחרי ההנחה הראשונה נשאר 50%.<br/>חצי מ-50% זה 25%. נשאר לשלם <span className="font-bold">25%</span> מהמחיר המקורי.</div> },
+                { q: "כמה הם 150% מתוך 10?", a: 15, opts: [10, 15, 20, 150], exp: <div className="text-lg">100% זה 10.<br/>עוד 50% (חצי) זה 5.<br/>סה"כ 10 ועוד 5 שווה <span className="font-bold">15</span>.</div> },
+                { q: "כמה הם 0% מתוך 1000?", a: 0, opts: [0, 1, 10, 1000], exp: <div className="text-lg">0% זה כלום. התשובה היא <span className="font-bold">0</span>.</div> },
+                { q: "כמה הם 20% מתוך 20?", a: 4, opts: [2, 4, 10, 20], exp: <div className="flex items-center gap-2 text-xl font-bold" dir="ltr"><Fraction n="20" d="100"/> × 20 = 4</div> },
+                { q: "כמה הם 30% מתוך 300?", a: 90, opts: [30, 60, 90, 100], exp: <div className="flex items-center gap-2 text-xl font-bold" dir="ltr"><Fraction n="30" d="100"/> × 300 = 90</div> },
+            ];
+
+            const current = questions[qIndex];
+
+            const handleAnswer = (ans) => {
+                setSelectedOption(ans);
+                setShowAnswer(true);
+                if (ans === current.a) setScore(score + 1);
+            };
+
+            const nextQ = () => {
+                if (qIndex < questions.length - 1) {
+                    setQIndex(qIndex + 1);
+                    setShowAnswer(false);
+                    setSelectedOption(null);
+                } else {
+                    setIsFinished(true);
+                }
+            };
+
+            if (isFinished) {
+                return (
+                    <div className="max-w-xl mx-auto text-center fade-in py-12">
+                        <div className="text-6xl mb-4">🏆</div>
+                        <h2 className="text-4xl font-black text-slate-800 mb-4">סיימת את המבחן הגדול!</h2>
+                        <p className="text-2xl text-slate-600 mb-8">הציון שלך: <span className="font-bold text-indigo-600">{Math.round((score / 20) * 100)}</span></p>
+                        <button onClick={() => window.location.reload()} className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold text-lg hover:bg-indigo-700">התחל מחדש</button>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="max-w-xl mx-auto fade-in px-4">
+                    <div className="flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                        <div className="font-bold text-slate-500">שאלה {qIndex + 1} מתוך 20</div>
+                        <div className="font-bold text-indigo-600">ניקוד: {score}</div>
+                    </div>
+                    
+                    <Card className="border-t-4 border-t-indigo-500">
+                        <div className="mb-8">
+                            <h3 className="text-2xl font-bold text-slate-800 mb-8 leading-snug">{current.q}</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                {current.opts.map((opt, i) => (
+                                    <button
+                                        key={i}
+                                        onClick={() => handleAnswer(opt)}
+                                        disabled={showAnswer}
+                                        className={`p-6 rounded-2xl text-xl font-bold transition-all border-b-4 active:border-b-0 active:translate-y-1 
+                                            ${showAnswer 
+                                                ? (opt === current.a ? 'bg-emerald-100 border-emerald-500 text-emerald-800' : (opt === selectedOption ? 'bg-red-100 border-red-300 text-red-800' : 'bg-slate-50 opacity-50'))
+                                                : 'bg-slate-100 border-slate-300 hover:bg-white text-slate-700 hover:border-indigo-400'
+                                            }
+                                        `}
+                                    >
+                                        {opt}%?
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {showAnswer && (
+                            <div className={`p-6 rounded-2xl animate-in fade-in slide-in-from-bottom-2 ${selectedOption === current.a ? 'bg-emerald-50 text-emerald-900' : 'bg-red-50 text-red-900'}`}>
+                                <div className="font-bold text-xl mb-3 border-b border-black/10 pb-2">
+                                    {selectedOption === current.a ? '✅ תשובה נכונה!' : '❌ לא נורא, הנה ההסבר:'}
+                                </div>
+                                <div className="text-lg mb-6 leading-relaxed bg-white/50 p-4 rounded-xl">
+                                    {current.exp}
+                                </div>
+                                <button onClick={nextQ} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-slate-800 transition">
+                                    {qIndex === 19 ? 'סיום וסיכום' : 'לשאלה הבאה ➜'}
+                                </button>
+                            </div>
+                        )}
+                    </Card>
+                </div>
+            );
+        };
+
+        // --- האפליקציה הראשית ---
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('basics');
+
+            const menu = [
+                { id: 'basics', label: 'יסודות', icon: icons.percent },
+                { id: 'formula', label: 'הנוסחה', icon: icons.calculator },
+                { id: 'magic', label: 'טריקים', icon: icons.magic },
+                { id: 'shop', label: 'החנות', icon: icons.shop },
+                { id: 'gym', label: 'המבחן הגדול', icon: icons.gym },
+            ];
+
+            return (
+                <div className="min-h-screen pb-24 md:pb-12 bg-slate-50 font-rubik">
+                    {/* Header */}
+                    <div className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
+                        <div className="max-w-5xl mx-auto px-4">
+                            <div className="flex justify-between items-center py-3 md:py-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-indigo-600 text-white p-2 rounded-lg shadow-lg shadow-indigo-200">
+                                        {React.cloneElement(icons.percent, { size: 24 })}
+                                    </div>
+                                    <h1 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight">
+                                        מאסטר האחוזים
+                                    </h1>
+                                </div>
+                                <a href="../index.html" className="hidden md:flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors bg-slate-100 px-4 py-2 rounded-xl">
+                                    חזרה ללובי
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Mobile Bottom Navigation */}
+                    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-30 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+                        <div className="flex justify-around items-center p-2">
+                            {menu.map(item => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => setActiveTab(item.id)}
+                                    className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all min-w-[64px]
+                                        ${activeTab === item.id 
+                                            ? 'text-indigo-600 bg-indigo-50 font-bold' 
+                                            : 'text-slate-400 font-medium'
+                                        }`}
+                                >
+                                    {React.cloneElement(item.icon, { size: 24, strokeWidth: activeTab === item.id ? 2.5 : 2 })}
+                                    <span className="text-[10px]">{item.label}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Desktop Navigation */}
+                    <div className="hidden md:block bg-white border-b border-slate-200 mb-8">
+                        <div className="max-w-5xl mx-auto px-4 flex gap-1">
+                            {menu.map(item => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => setActiveTab(item.id)}
+                                    className={`flex items-center gap-2 px-6 py-4 font-bold text-sm transition-all border-b-4 
+                                        ${activeTab === item.id 
+                                            ? 'text-indigo-600 border-indigo-600 bg-indigo-50/50' 
+                                            : 'text-slate-500 border-transparent hover:text-indigo-500 hover:bg-slate-50'
+                                        }`}
+                                >
+                                    {item.icon}
+                                    {item.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Content */}
+                    <main className="max-w-5xl mx-auto p-4 md:p-8 mb-16 md:mb-0">
+                        {activeTab === 'basics' && <BasicsTab />}
+                        {activeTab === 'formula' && <FormulaTab />}
+                        {activeTab === 'magic' && <MagicTab />}
+                        {activeTab === 'shop' && <ShopTab />}
+                        {activeTab === 'gym' && <GymTab />}
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
