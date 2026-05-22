@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>השיטה הגרפית - צעד אחר צעד</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --רקע: #f6f5f0;
+      --לבן: #ffffff;
+      --טקסט: #1f2937;
+      --משני: #5f6b7a;
+      --קו: #ddd6ca;
+      --טורקיז: #0f766e;
+      --כחול: #2563eb;
+      --כחול-בהיר: #dbeafe;
+      --סגול: #7c3aed;
+      --סגול-בהיר: #ede9fe;
+      --ירוק: #166534;
+      --ירוק-בהיר: #dcfce7;
+      --כתום: #c2410c;
+      --כתום-בהיר: #ffedd5;
+      --זהב: #a16207;
+      --זהב-בהיר: #fef3c7;
+      --צל: 0 16px 34px rgba(15, 23, 42, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Heebo', sans-serif;
+      background: linear-gradient(180deg, #f8fafc 0%, var(--רקע) 100%);
+      color: var(--טקסט);
+    }
+    button { font: inherit; }
+    .מעטפת { max-width: 1450px; margin: 0 auto; padding: 18px; }
+    .כותרת {
+      background: var(--לבן);
+      border: 1px solid var(--קו);
+      border-radius: 28px;
+      box-shadow: var(--צל);
+      padding: 24px;
+      margin-bottom: 18px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(2.2rem, 5vw, 4.1rem);
+      font-weight: 900;
+      line-height: 1.08;
+    }
+    .כותרת p { margin: 0; color: var(--משני); font-size: clamp(1.08rem, 2vw, 1.35rem); }
+    .טאבים { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+    .טאב {
+      border: 1px solid var(--קו);
+      background: var(--לבן);
+      color: var(--טקסט);
+      border-radius: 18px;
+      padding: 16px 20px;
+      cursor: pointer;
+      font-size: 1.16rem;
+      font-weight: 800;
+      transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    }
+    .טאב:hover { transform: translateY(-1px); }
+    .טאב.פעיל { background: #eefcf9; border-color: var(--טורקיז); color: var(--טורקיז); }
+    .פריסה { display: grid; grid-template-columns: 1.05fr 1.35fr; gap: 18px; align-items: start; }
+    .פריסה.סיכום-מלא { grid-template-columns: 1fr; }
+    .כרטיס {
+      background: var(--לבן);
+      border: 1px solid var(--קו);
+      border-radius: 28px;
+      box-shadow: var(--צל);
+      padding: 24px;
+    }
+    .כותרת-דוגמה { margin: 0 0 10px; font-size: clamp(1.6rem, 3vw, 2.35rem); font-weight: 900; line-height: 1.12; }
+    .מערכת {
+      display: inline-flex;
+      flex-direction: column;
+      gap: 14px;
+      padding: 18px 20px;
+      border-radius: 22px;
+      background: #fafaf9;
+      border: 1px solid var(--קו);
+      margin: 10px 0 18px;
+      min-width: min(100%, 520px);
+    }
+    .שורה-משוואה {
+      font-size: clamp(1.9rem, 3.5vw, 2.8rem);
+      font-weight: 800;
+      line-height: 1.2;
+      direction: ltr;
+      unicode-bidi: embed;
+    }
+    .כחול { color: var(--כחול); }
+    .סגול { color: var(--סגול); }
+    .תוכן-שלב {
+      border: 1px solid var(--קו);
+      border-radius: 24px;
+      padding: 20px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+      min-height: 320px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .מספור {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 58px;
+      height: 58px;
+      border-radius: 18px;
+      background: #dcfce7;
+      color: var(--ירוק);
+      font-size: 1.5rem;
+      font-weight: 900;
+      margin-bottom: 14px;
+      box-shadow: 0 8px 22px rgba(22, 101, 52, 0.08);
+    }
+    .כותרת-שלב { margin: 0 0 12px; font-size: clamp(1.5rem, 2.6vw, 2rem); font-weight: 900; }
+    .טקסט-שלב { font-size: clamp(1.25rem, 2.05vw, 1.6rem); line-height: 1.9; }
+    .טקסט-שלב p { margin: 0 0 12px; }
+    .ביטוי {
+      display: inline-block;
+      direction: ltr;
+      unicode-bidi: embed;
+      padding: 8px 14px;
+      border-radius: 16px;
+      border: 1px solid #d8dde5;
+      background: #fff;
+      font-weight: 800;
+      margin: 5px 2px;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+    }
+    .מרקר-צהוב {
+      background: #fef08a !important;
+      border-color: #fde047 !important;
+    }
+    .הערת-צד {
+      display: inline-block;
+      background: #fef08a;
+      border: 1px solid #fde047;
+      padding: 6px 12px;
+      border-radius: 12px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: #854d0e;
+      font-size: 0.9em;
+      box-shadow: 0 4px 10px rgba(254, 240, 138, 0.3);
+    }
+    .ltr { direction: ltr; unicode-bidi: embed; display: inline-block; }
+    .שורת-כפתורים { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+    .כפתור {
+      min-height: 58px;
+      border: none;
+      border-radius: 18px;
+      padding: 12px 20px;
+      cursor: pointer;
+      font-size: 1.16rem;
+      font-weight: 800;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    }
+    .כפתור:hover { transform: translateY(-1px); }
+    .כפתור:active { transform: translateY(1px); }
+    .כפתור-ראשי { background: var(--טורקיז); color: white; box-shadow: 0 10px 24px rgba(15, 118, 110, 0.18); }
+    .כפתור-משני { background: #f3f4f6; color: var(--טקסט); border: 1px solid #d1d5db; }
+    .מד-שלבים { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+    .עיגול-שלב {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.05rem;
+      border: 1px solid var(--קו);
+      background: #fff;
+      color: var(--משני);
+    }
+    .עיגול-שלב.נוכחי { background: var(--טורקיז); color: white; border-color: var(--טורקיז); }
+    .עיגול-שלב.עבר { background: #ecfdf5; color: var(--ירוק); border-color: #86efac; }
+    .גרף-כרטיס { padding: 20px; }
+    .כותרת-גרף { margin: 0 0 10px; font-size: clamp(1.55rem, 3vw, 2.1rem); font-weight: 900; }
+    canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+      background: #fcfcfb;
+      border-radius: 24px;
+      border: 1px solid #e5e7eb;
+    }
+    .שורת-פתרון {
+      margin-top: 16px;
+      border-radius: 22px;
+      padding: 16px 18px;
+      background: var(--ירוק-בהיר);
+      border: 1px solid #86efac;
+      color: var(--ירוק);
+      font-size: clamp(1.4rem, 2.2vw, 1.95rem);
+      font-weight: 800;
+    }
+    .שורת-פתרון span { direction: ltr; unicode-bidi: embed; display: inline-block; margin-inline-start: 8px; }
+
+    .סיכום-טקסט {
+      font-size: clamp(1.18rem, 1.95vw, 1.45rem);
+      line-height: 1.85;
+    }
+    .סיכום-פתיח {
+      padding: 16px 18px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, #eff6ff 0%, #eefcf9 100%);
+      border: 1px solid #bfdbfe;
+      margin-bottom: 16px;
+      font-weight: 800;
+      color: #1e3a8a;
+    }
+    .סיכום-גריד {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .שלב-סיכום {
+      border-radius: 20px;
+      padding: 16px 16px 16px 18px;
+      border: 1px solid transparent;
+      box-shadow: 0 10px 20px rgba(15, 23, 42, 0.05);
+      background: #fff;
+      min-height: 110px;
+    }
+    .שלב-1 { background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%); border-color: #bfdbfe; }
+    .שלב-2 { background: linear-gradient(180deg, #f5f3ff 0%, #ffffff 100%); border-color: #ddd6fe; }
+    .שלב-3 { background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 100%); border-color: #bbf7d0; }
+    .שלב-4 { background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%); border-color: #fed7aa; }
+    .שלב-5 { background: linear-gradient(180deg, #fefce8 0%, #ffffff 100%); border-color: #fde68a; }
+    .שלב-6 { background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%); border-color: #e2e8f0; }
+    .מספר-סיכום {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      font-size: 1.05rem;
+      font-weight: 900;
+      margin-bottom: 10px;
+      color: white;
+    }
+    .מספר-1 { background: #2563eb; }
+    .מספר-2 { background: #7c3aed; }
+    .מספר-3 { background: #0f766e; }
+    .מספר-4 { background: #ea580c; }
+    .מספר-5 { background: #ca8a04; }
+    .מספר-6 { background: #334155; }
+    .סיכום-טקסט strong { font-weight: 900; }
+    .טיפ-סיכום {
+      margin-top: 14px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: #0f172a;
+      color: #f8fafc;
+      font-weight: 700;
+    }
+    .טיפ-כחול { color: #93c5fd; }
+    .טיפ-צהוב { color: #fde68a; }
+    .טיפ-ירוק { color: #86efac; }
+    .תג-קטן {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.7);
+      border: 1px solid rgba(0,0,0,0.05);
+      margin-inline-start: 8px;
+      font-size: 0.95em;
+      font-weight: 900;
+      color: var(--טקסט);
+    }
+    @media (max-width: 1050px) { .פריסה { grid-template-columns: 1fr; } }
+    @media (max-width: 720px) {
+      .מעטפת { padding: 12px; }
+      .כרטיס, .כותרת { padding: 18px; border-radius: 22px; }
+      .תוכן-שלב { min-height: 230px; }
+      .מספור { width: 52px; height: 52px; }
+      .סיכום-גריד { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="מעטפת">
+    <header class="כותרת">
+      <h1>השיטה הגרפית</h1>
+      <p>כל דוגמה מוצגת צעד אחר צעד. לוחצים ומתקדמים שלב אחד בכל פעם.</p>
+    </header>
+
+    <div class="טאבים">
+      <button class="טאב פעיל" data-tab="1">דוגמה 1</button>
+      <button class="טאב" data-tab="2">דוגמה 2</button>
+      <button class="טאב" data-tab="3">דוגמה 3</button>
+      <button class="טאב" data-tab="4">סיכום</button>
+    </div>
+
+    <main class="פריסה">
+      <section class="כרטיס">
+        <h2 class="כותרת-דוגמה" id="כותרת-דוגמה"></h2>
+
+        <div class="מערכת" id="אזור-מערכת">
+          <div class="שורה-משוואה כחול" id="משוואה-1"></div>
+          <div class="שורה-משוואה סגול" id="משוואה-2"></div>
+        </div>
+
+        <div class="תוכן-שלב" id="אזור-שלב"></div>
+
+        <div class="שורת-כפתורים" id="כפתורים-שלבים">
+          <button class="כפתור כפתור-ראשי" id="הבא">לשלב הבא</button>
+          <button class="כפתור כפתור-משני" id="הקודם">לשלב הקודם</button>
+          <button class="כפתור כפתור-משני" id="התחל">להתחלה</button>
+        </div>
+
+        <div class="מד-שלבים" id="מד-שלבים"></div>
+      </section>
+
+      <section class="כרטיס גרף-כרטיס">
+        <h2 class="כותרת-גרף">הפתרון הגרפי</h2>
+        <canvas id="גרף" width="980" height="700"></canvas>
+        <div class="שורת-פתרון" id="שורת-פתרון"></div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const examples = {
+      1: {
+        title: 'דוגמה 1 - שתי פונקציות מסודרות',
+        eq1: 'y = 2x + 1',
+        eq2: 'y = -x + 7',
+        lines: [
+          { m: 2, b: 1, color: '#2563eb', label: 'y = 2x + 1' },
+          { m: -1, b: 7, color: '#7c3aed', label: 'y = -x + 7' }
+        ],
+        point: { x: 2, y: 5 },
+        steps: [
+          { title: 'המערכת הנתונה', html: 'יש לנו שתי משוואות שכבר כתובות בצורה נוחה:<br><span class="ביטוי כחול">y = 2x + 1</span><span class="ביטוי סגול">y = -x + 7</span>' },
+          { title: 'משווים בין שני הביטויים של y', html: 'מכיוון ששתי המשוואות שוות ל־<span class="ביטוי">y</span>, נכתוב:<br><span class="ביטוי">2x + 1 = -x + 7</span>' },
+          { title: 'מוצאים את x', html: 'נעביר אגפים כדי לרכז את כל ה־<span class="ביטוי">x</span> יחד ואת המספרים יחד:<br><span class="ביטוי">2x + x = 7 - 1</span><br><span class="ביטוי">3x = 6</span><br><span class="ביטוי מרקר-צהוב">x = 2</span>' },
+          { title: 'מוצאים את y', html: '<div class="הערת-צד">כבר מצאנו: x = 2</div><br>עכשיו מציבים כדי למצוא את <span class="ביטוי">y</span>. <strong>חשוב:</strong> זה לא משנה באיזו משוואה מציבים, כי הנקודה נמצאת על שני הישרים!<br><span class="ביטוי">y = 2·2 + 1</span><br><span class="ביטוי מרקר-צהוב">y = 5</span>' },
+          { title: 'הפתרון האלגברי', html: '<span class="ביטוי ltr">(2, 5)</span>' },
+          { title: 'הפתרון הגרפי', html: 'עכשיו רואים על הגרף את נקודת החיתוך:<br><span class="ביטוי ltr">(2, 5)</span>' }
+        ]
+      },
+      2: {
+        title: 'דוגמה 2 - קודם מסדרים משוואה',
+        eq1: 'y = 3x - 4',
+        eq2: 'x + y = 6',
+        lines: [
+          { m: 3, b: -4, color: '#2563eb', label: 'y = 3x - 4' },
+          { m: -1, b: 6, color: '#7c3aed', label: 'y = -x + 6' }
+        ],
+        point: { x: 2.5, y: 3.5 },
+        steps: [
+          { title: 'המערכת הנתונה', html: 'יש לנו:<br><span class="ביטוי כחול">y = 3x - 4</span><span class="ביטוי סגול">x + y = 6</span>' },
+          { title: 'מסדרים את המשוואה השנייה', html: 'כאן המטרה היא לבודד את <span class="ביטוי">y</span>, כלומר להביא את המשוואה לצורה <span class="ביטוי">y = mx + b</span>.<br>נעביר את <span class="ביטוי">x</span> אגף:<br><span class="ביטוי">y = 6 - x</span>' },
+          { title: 'המערכת החדשה', html: 'נכתוב את המערכת החדשה שוב מול העיניים כדי לראות בבירור שעכשיו אפשר להשוות:<br><span class="ביטוי כחול">y = 3x - 4</span><br><span class="ביטוי סגול">y = 6 - x</span>' },
+          { title: 'משווים בין שני הביטויים של y', html: 'עכשיו שתי המשוואות כתובות עם <span class="ביטוי">y</span> לבד, ולכן אפשר להשוות ביניהן:<br><span class="ביטוי">3x - 4 = 6 - x</span>' },
+          { title: 'מוצאים את x', html: 'נעביר אגפים ונשמור על סדר ברור:<br><span class="ביטוי">3x + x = 6 + 4</span><br><span class="ביטוי">4x = 10</span><br><span class="ביטוי מרקר-צהוב">x = 2.5</span>' },
+          { title: 'מוצאים את y', html: '<div class="הערת-צד">כבר מצאנו: x = 2.5</div><br>עכשיו מציבים כדי למצוא את <span class="ביטוי">y</span>. <strong>חשוב:</strong> זה לא משנה באיזו משוואה מציבים, כי הנקודה נמצאת על שני הישרים!<br><span class="ביטוי">y = 6 - 2.5</span><br><span class="ביטוי מרקר-צהוב">y = 3.5</span>' },
+          { title: 'הפתרון האלגברי', html: '<span class="ביטוי ltr">(2.5, 3.5)</span>' },
+          { title: 'הפתרון הגרפי', html: 'עכשיו רואים על הגרף את נקודת החיתוך:<br><span class="ביטוי ltr">(2.5, 3.5)</span>' }
+        ]
+      },
+      3: {
+        title: 'דוגמה 3 - מסדרים שתי משוואות',
+        eq1: '2x + y = 9',
+        eq2: 'x - y = 0',
+        lines: [
+          { m: -2, b: 9, color: '#2563eb', label: 'y = -2x + 9' },
+          { m: 1, b: 0, color: '#7c3aed', label: 'y = x' }
+        ],
+        point: { x: 3, y: 3 },
+        steps: [
+          { title: 'המערכת הנתונה', html: 'יש לנו:<br><span class="ביטוי כחול">2x + y = 9</span><span class="ביטוי סגול">x - y = 0</span>' },
+          { title: 'מסדרים את המשוואה הראשונה', html: 'המטרה בשיטה הזאת היא תמיד להגיע לצורה <span class="ביטוי">y = mx + b</span>, כלומר <strong>לבודד את y</strong>.<br>נעביר את <span class="ביטוי">2x</span> אגף (הסימן ישתנה למינוס):<br><span class="ביטוי מרקר-צהוב">y = 9 - 2x</span><br>נסדר את המשוואה:<br><span class="ביטוי">y = -2x + 9</span>' },
+          { title: 'מסדרים את המשוואה השנייה', html: 'גם כאן אנחנו רוצים <strong>y לבד</strong> כדי שנוכל להשוות בין המשוואות בקלות.<br>נעביר את <span class="ביטוי">x</span> אגף (הסימן ישתנה למינוס):<br><span class="ביטוי מרקר-צהוב">-y = -x</span><br>נחלק או נכפול ב-1- כדי להיפטר מהמינוס בשני האגפים:<br><span class="ביטוי מרקר-צהוב">y = x</span>' },
+          { title: 'המערכת החדשה', html: 'נכתוב את המערכת החדשה שוב מול העיניים כדי לראות בבירור שעכשיו אפשר להשוות:<br><span class="ביטוי כחול">y = -2x + 9</span><br><span class="ביטוי סגול">y = x</span>' },
+          { title: 'משווים בין שני הביטויים של y', html: 'שתי המשוואות כבר מסודרות בצורה הנכונה, אז עכשיו אפשר להשוות ביניהן:<br><span class="ביטוי">-2x + 9 = x</span>' },
+          { title: 'מוצאים את x', html: 'נעביר אגפים ונפתור בשלבים קצרים וברורים:<br><span class="ביטוי">9 = 3x</span><br><span class="ביטוי מרקר-צהוב">x = 3</span>' },
+          { title: 'מוצאים את y', html: '<div class="הערת-צד">כבר מצאנו: x = 3</div><br>עכשיו מציבים כדי למצוא את <span class="ביטוי">y</span>. <strong>חשוב:</strong> זה לא משנה באיזו משוואה מציבים, כי הנקודה נמצאת על שני הישרים!<br><span class="ביטוי">y = x</span><br><span class="ביטוי מרקר-צהוב">y = 3</span>' },
+          { title: 'הפתרון האלגברי', html: '<span class="ביטוי ltr">(3, 3)</span>' },
+          { title: 'הפתרון הגרפי', html: 'עכשיו רואים על הגרף את נקודת החיתוך:<br><span class="ביטוי ltr">(3, 3)</span>' }
+        ]
+      }
+    };
+
+    const summary = {
+      title: 'סיכום - מה עושים בשיטה הגרפית',
+      html: `
+        <div class="סיכום-טקסט">
+          <div class="סיכום-פתיח">המטרה: להגיע מהר ובצורה מסודרת לנקודת החיתוך של שני הישרים, בלי דילוגים מיותרים.</div>
+          <div class="סיכום-גריד">
+            <div class="שלב-סיכום שלב-1">
+              <div class="מספר-סיכום מספר-1">1</div>
+              קודם כול בודקים שכל משוואה מסודרת יפה, ובמיוחד מחפשים מצב שבו <strong>y לבד</strong>.
+              <div><span class="תג-קטן">צורה מועדפת</span><span class="ביטוי">y = mx + b</span></div>
+            </div>
+            <div class="שלב-סיכום שלב-2">
+              <div class="מספר-סיכום מספר-2">2</div>
+              אם אחת המשוואות לא מסודרת, מסדרים אותה מחדש. זה חוסך טעויות ומקל על ההשוואה.
+              <div><span class="תג-קטן">טיפ</span> קודם לבודד את <span class="ביטוי">y</span>, אחר כך להשוות.</div>
+            </div>
+            <div class="שלב-סיכום שלב-3">
+              <div class="מספר-סיכום מספר-3">3</div>
+              משווים בין שני הביטויים של <span class="ביטוי">y</span>, פותרים את המשוואה, ומוצאים את <span class="ביטוי">x</span>.
+            </div>
+            <div class="שלב-סיכום שלב-4">
+              <div class="מספר-סיכום מספר-4">4</div>
+              מציבים את ערך ה־<span class="ביטוי">x</span> כדי למצוא את <span class="ביטוי">y</span>, כי אנחנו מחפשים נקודה אחת שנמצאת על שני הישרים.
+            </div>
+            <div class="שלב-סיכום שלב-5">
+              <div class="מספר-סיכום מספר-5">5</div>
+              כותבים את התשובה כנקודה מסודרת: <span class="ביטוי ltr">(x, y)</span>.
+              <div><span class="תג-קטן">חשוב</span> הסוגריים עצמם נשמרים בל־<span class="ltr">LTR</span> כדי שלא יתהפכו.</div>
+            </div>
+            <div class="שלב-סיכום שלב-6">
+              <div class="מספר-סיכום מספר-6">6</div>
+              על הגרף, הפתרון הוא <strong>נקודת החיתוך</strong> של שני הישרים. זו הנקודה שממנה מתחילים או אליה מגיעים בשיטה.
+            </div>
+          </div>
+          <div class="טיפ-סיכום">זכרו: <span class="טיפ-כחול">כשיש משוואה לא מסודרת</span>, קודם מסדרים אותה, <span class="טיפ-צהוב">אחר כך משווים</span>, ו־<span class="טיפ-ירוק">בסוף מציבים</span>. זה השביל הכי בטוח לתלמידים.</div>
+        </div>
+      `
+    };
+
+    const tabButtons = [...document.querySelectorAll('[data-tab]')];
+    const exampleTitle = document.getElementById('כותרת-דוגמה');
+    const eq1El = document.getElementById('משוואה-1');
+    const eq2El = document.getElementById('משוואה-2');
+    const stepArea = document.getElementById('אזור-שלב');
+    const progressArea = document.getElementById('מד-שלבים');
+    const solutionLine = document.getElementById('שורת-פתרון');
+    const nextBtn = document.getElementById('הבא');
+    const prevBtn = document.getElementById('הקודם');
+    const startBtn = document.getElementById('התחל');
+    const systemArea = document.getElementById('אזור-מערכת');
+    const stepsButtonsArea = document.getElementById('כפתורים-שלבים');
+    const canvas = document.getElementById('גרף');
+    const ctx = canvas.getContext('2d');
+
+    let currentTab = 1;
+    let currentStep = 0;
+
+    function fmt(n) {
+      const rounded = Math.round(n * 100) / 100;
+      return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
+    }
+
+    function pointText(x, y) {
+      return `(${fmt(x)}, ${fmt(y)})`;
+    }
+
+    function renderStep() {
+      const graphCard = document.querySelector('.גרף-כרטיס');
+      const layoutArea = document.querySelector('.פריסה');
+
+      if (currentTab === 4) {
+        exampleTitle.textContent = summary.title;
+        systemArea.style.visibility = 'hidden';
+        stepsButtonsArea.style.display = 'none';
+        progressArea.innerHTML = '';
+        stepArea.innerHTML = summary.html;
+        
+        // הסתרת הפתרון הגרפי בסיכום והרחבה לרוחב מלא
+        graphCard.style.display = 'none';
+        layoutArea.classList.add('סיכום-מלא');
+        return;
+      }
+
+      // החזרת הגרף עבור הדוגמאות הרגילות
+      graphCard.style.display = 'block';
+      layoutArea.classList.remove('סיכום-מלא');
+      
+      systemArea.style.visibility = 'visible';
+      stepsButtonsArea.style.display = 'flex';
+      const example = examples[currentTab];
+      const step = example.steps[currentStep];
+
+      exampleTitle.textContent = example.title;
+      eq1El.textContent = example.eq1;
+      eq2El.textContent = example.eq2;
+
+      stepArea.innerHTML = `
+        <div class="מספור">${currentStep + 1}</div>
+        <h3 class="כותרת-שלב">${step.title}</h3>
+        <div class="טקסט-שלב">${step.html}</div>
+      `;
+
+      progressArea.innerHTML = example.steps.map((_, index) => {
+        let cls = 'עיגול-שלב';
+        if (index < currentStep) cls += ' עבר';
+        if (index === currentStep) cls += ' נוכחי';
+        return `<div class="${cls}">${index + 1}</div>`;
+      }).join('');
+
+      solutionLine.innerHTML = currentStep >= example.steps.length - 2
+        ? `הפתרון: <span>${pointText(example.point.x, example.point.y)}</span>`
+        : 'הפתרון יופיע בהמשך';
+
+      prevBtn.disabled = currentStep === 0;
+      nextBtn.disabled = currentStep === example.steps.length - 1;
+      prevBtn.style.opacity = currentStep === 0 ? '0.55' : '1';
+      nextBtn.style.opacity = currentStep === example.steps.length - 1 ? '0.55' : '1';
+
+      drawGraph(example, currentStep);
+    }
+
+    function baseGrid(minX, maxX, minY, maxY) {
+      const w = canvas.width, h = canvas.height;
+      const pad = 68;
+      const scaleX = (w - pad * 2) / (maxX - minX);
+      const scaleY = (h - pad * 2) / (maxY - minY);
+      const toX = x => pad + (x - minX) * scaleX;
+      const toY = y => h - pad - (y - minY) * scaleY;
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = '#fcfcfb';
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.strokeStyle = '#e5e7eb';
+      ctx.lineWidth = 1;
+      for (let x = Math.ceil(minX); x <= Math.floor(maxX); x++) {
+        const px = toX(x);
+        ctx.beginPath(); ctx.moveTo(px, pad); ctx.lineTo(px, h - pad); ctx.stroke();
+      }
+      for (let y = Math.ceil(minY); y <= Math.floor(maxY); y++) {
+        const py = toY(y);
+        ctx.beginPath(); ctx.moveTo(pad, py); ctx.lineTo(w - pad, py); ctx.stroke();
+      }
+
+      ctx.strokeStyle = '#111827';
+      ctx.lineWidth = 2.4;
+      if (minY <= 0 && maxY >= 0) { ctx.beginPath(); ctx.moveTo(pad, toY(0)); ctx.lineTo(w - pad, toY(0)); ctx.stroke(); }
+      if (minX <= 0 && maxX >= 0) { ctx.beginPath(); ctx.moveTo(toX(0), pad); ctx.lineTo(toX(0), h - pad); ctx.stroke(); }
+
+      ctx.font = '22px Heebo';
+      ctx.fillStyle = '#374151';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let x = Math.ceil(minX); x <= Math.floor(maxX); x++) {
+        if (x === 0) continue;
+        ctx.fillText(String(x), toX(x), (minY <= 0 && maxY >= 0) ? toY(0) + 22 : h - pad + 22);
+      }
+      for (let y = Math.ceil(minY); y <= Math.floor(maxY); y++) {
+        if (y === 0) continue;
+        ctx.fillText(String(y), (minX <= 0 && maxX >= 0) ? toX(0) - 22 : pad - 22, toY(y));
+      }
+
+      return { toX, toY, w, h, pad };
+    }
+
+    function drawLabelWithPoint(prefix, xPoint, yPoint, textX, textY, color) {
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.font = 'bold 26px Heebo';
+      ctx.textAlign = 'right';
+      ctx.direction = 'rtl';
+      ctx.fillText(prefix, textX, textY);
+
+      ctx.direction = 'ltr';
+      ctx.textAlign = 'left';
+      ctx.fillText(` ${pointText(xPoint, yPoint)}`, textX + 8, textY);
+      ctx.restore();
+    }
+
+    function drawGraph(example, stepIndex) {
+      const xInt = example.point.x;
+      const yInt = example.point.y;
+      const minX = Math.min(-3, xInt - 4);
+      const maxX = Math.max(8, xInt + 4);
+      const minY = Math.min(-6, yInt - 5);
+      const maxY = Math.max(10, yInt + 5);
+      const { toX, toY, w } = baseGrid(minX, maxX, minY, maxY);
+
+      const linesToShow = stepIndex >= 1 ? 2 : 0;
+      example.lines.slice(0, linesToShow).forEach((line) => {
+        const xA = minX, yA = line.m * xA + line.b;
+        const xB = maxX, yB = line.m * xB + line.b;
+        ctx.strokeStyle = line.color;
+        ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.moveTo(toX(xA), toY(yA)); ctx.lineTo(toX(xB), toY(yB)); ctx.stroke();
+      });
+
+      if (stepIndex >= example.steps.length - 1) {
+        example.lines.forEach((line, idx) => {
+          const lx = idx === 0 ? minX + 2.2 : maxX - 2.2;
+          const ly = line.m * lx + line.b;
+          ctx.fillStyle = line.color;
+          ctx.font = 'bold 26px Heebo';
+          ctx.textAlign = 'center';
+          ctx.direction = 'ltr';
+          ctx.fillText(line.label, toX(lx), toY(ly) - 22);
+        });
+      }
+
+      if (stepIndex >= example.steps.length - 2) {
+        const px = toX(xInt), py = toY(yInt);
+        ctx.fillStyle = '#166534';
+        ctx.beginPath(); ctx.arc(px, py, 9, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#166534';
+        ctx.lineWidth = 2.3;
+        ctx.setLineDash([9, 8]);
+        ctx.beginPath();
+        ctx.moveTo(px, py); ctx.lineTo(px, toY(0));
+        ctx.moveTo(px, py); ctx.lineTo(toX(0), py);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        drawLabelWithPoint('נקודת המפגש', xInt, yInt, Math.min(w - 18, px + 165), Math.max(40, py - 24), '#14532d');
+      }
+    }
+
+    function switchTab(id) {
+      currentTab = Number(id);
+      currentStep = 0;
+      tabButtons.forEach(btn => btn.classList.toggle('פעיל', Number(btn.dataset.tab) === currentTab));
+      renderStep();
+    }
+
+    tabButtons.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+    nextBtn.addEventListener('click', () => {
+      if (currentTab === 4) return;
+      const max = examples[currentTab].steps.length - 1;
+      if (currentStep < max) { currentStep += 1; renderStep(); }
+    });
+    prevBtn.addEventListener('click', () => {
+      if (currentTab === 4) return;
+      if (currentStep > 0) { currentStep -= 1; renderStep(); }
+    });
+    startBtn.addEventListener('click', () => { currentStep = 0; renderStep(); });
+
+    switchTab(1);
+  </script>
+</body>
+</html>
